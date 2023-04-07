@@ -1,61 +1,52 @@
-from PIL import Image
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
-
 
 def main():
     # Load in images
     face_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp1/face.bmp', cv2.IMREAD_GRAYSCALE)
     gun_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp1/gun.bmp', cv2.IMREAD_GRAYSCALE)
     test_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp1/test.bmp', cv2.IMREAD_GRAYSCALE)
-    print(test_img)
 
+    # Preform Sequential connected component labeling
     labels_face = seq_CCL(face_img)
     labels_gun = seq_CCL(gun_img)
     labels_test = seq_CCL(test_img)
 
-    print(f"\n face num obs: {np.unique(labels_face)}")
-    print(f"\n gun num obs: {np.unique(labels_gun)}")
-    print(f"\n test num obs: {np.unique(labels_test)}")
-
-    # Resize the image to 500x500 pixels
-    # labels = cv2.resize(labels, (500, 500))
-
-    cv2.imshow('Face CCL', np.uint8(labels_face))
-    cv2.imshow('Gun CCL', np.uint8(labels_gun))
-    cv2.imshow('Test CCL', np.uint8(labels_test))
-
-
+    # Resize images to the same size
+    # Original images
+    orginal_face_img = cv2.resize(face_img, (250, 250))
+    orginal_gun_img = cv2.resize(gun_img, (250, 250))
+    orginal_test_img = cv2.resize(test_img, (250, 250))
+    # Images after CCL
+    labels_face = cv2.resize(labels_face, (250, 250))
+    labels_gun = cv2.resize(labels_gun, (250, 250))
+    labels_test = cv2.resize(labels_test, (250, 250))
+    # Filted images
     # Size filter on pixel amount
     labels_gun_filter = size_filter(labels_gun, 224)
-    print(f"\n gun num obs after filter: {np.unique(labels_gun_filter)}")
-    cv2.imshow('Gun CCL after size filter', np.uint8(labels_gun_filter))
+    labels_gun_filter = cv2.resize(labels_gun_filter, (250, 250))
 
-
-    # print(face_img)
-
-    # # Display image
-    # cv2.imshow('face_img', face_img)
-    # cv2.imshow('gun_img', gun_img)
-    # cv2.imshow('test_img', test_img)
+    # Combine the images into one horizontally
+    hconcat1 = cv2.hconcat([np.uint8(orginal_face_img), np.uint8(orginal_gun_img), np.uint8(orginal_test_img)])
+    hconcat2 = cv2.hconcat([np.uint8(labels_face), np.uint8(labels_gun), np.uint8(labels_test)])
+    hconcat3 = cv2.hconcat([np.uint8(labels_face), np.uint8(labels_gun_filter), np.uint8(labels_test)])
+    # Concatenate images vertically
+    final_image = cv2.vconcat([hconcat1,hconcat2,hconcat3])
+    # Display the final image in a window
+    cv2.imshow('[Row1] - Original, [Row2] - Sequential connected component labeling, [Row3] - Size filter', final_image)
 
     # Key press and close the window
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-
-
+''' Sequential connected component labeling '''
 def seq_CCL(image):
     # Get image dimensions
     height, width = image.shape
     labels = np.zeros((height, width)) # Lables for each pixel
     L_num = 0
-
     # Empty dictionary to hold all the sets/quivalence tables
     number_sets = {}
-    # number_sets[1] = set()    # Create initial set
-    num_set = 1 # TODO DELETE
 
     for u in range(height):
         for v in range(width):
@@ -64,29 +55,24 @@ def seq_CCL(image):
                 Ll = labels[u,v-1] # Left label
                 if Lu == Ll and Lu != 0 and Ll != 0: # Thus Upper and left is the same label
                     labels[u,v] = Lu
-                    # print("\n Same label")
-                elif Lu != Ll and not (Lu and Ll):   # Either is 0
+
+                elif Lu != Ll and not (Lu and Ll): # Either is 0
                     labels[u,v] = max(Lu, Ll)
-                    # print("\n One Zero")
+
                 elif Lu != Ll and Lu > 0 and Ll > 0: # Both has labels and an item should be added to quivalence tables
                     labels[u,v] = min(Lu, Ll)
-                    number_sets = E_table(Lu, Ll, number_sets, num_set)                  # Set these equal to each other in the quivalence tables
+                    # Set these equal to each other in the quivalence tables
+                    number_sets = E_table(Lu, Ll, number_sets)
+
+                    # This is a easy way instead of using sets
                     # if Lu == labels[u,v]:
                     #     Ll = Lu
                     # else:
                     #     Lu = Ll
 
-                    # print("\n Both Not Zero")
-                else:
+                else:  # Increase label if new object is discovered
                     L_num += 1
                     labels[u,v] = L_num
-                    # print(L_num)
-                    # print("\n New Cluster")
-
-    # # Resize the image to 500x500 pixels
-    # labels = cv2.resize(labels, (500, 500))
-
-    # cv2.imshow('labels_prev', np.uint8(labels))
 
     # Overlapping keys to remove
     to_remove_set = set()
@@ -102,11 +88,9 @@ def seq_CCL(image):
     for key in to_remove_set:
         number_sets.pop(key)
 
-    # for key, value in number_sets.items():
-    #     print(key, ':', value)
-
-    intensity = int(255/(len(number_sets)+1)) # Intensity increase for each set
-
+    # Intensity increase for each set
+    intensity = int(255/(len(number_sets)+1))
+    # Set intensity for each object
     for u in range(height):
         for v in range(width):
             i = 0
@@ -118,14 +102,13 @@ def seq_CCL(image):
 
     return labels
 
-# Create and add to quivalence tables
-def E_table(Lu, Ll, number_sets, num_set):
+''' Create and add to quivalence tables '''
+def E_table(Lu, Ll, number_sets):
 
-    create_new_set = False
+    create_new_set = False # Create new set flag
 
     if len(number_sets) == 0:
         number_sets[len(number_sets)+1] = set()    # If no set contains the label then create new
-        # print("\n create new set")
         number_sets[1].add(Lu)
         number_sets[1].add(Ll)
     else:
@@ -133,50 +116,45 @@ def E_table(Lu, Ll, number_sets, num_set):
             if Lu in number_sets[key]:          # Check sets if label is contained then add to set
                 number_sets[key].add(Lu)
                 number_sets[key].add(Ll)
-                # print("\n add to set")
                 create_new_set = False
             else:
                 create_new_set = True
 
         if create_new_set == True:
             number_sets[len(number_sets)+1] = set()    # If no set contains the label then create new
-            # print("\n create new set")
             number_sets[len(number_sets)].add(Lu)
             number_sets[len(number_sets)].add(Ll)
 
     return number_sets
 
-def size_filter(labels, size_threshold):
+''' Filter by pixel count '''
+def size_filter(labels, size_threshold): # Threshold can also be used
     # Get image dimensions
     height, width = labels.shape
     filter_out_label = []
     pixel_count_objects = []
+    labels1 = labels.copy()
+    unique_val = np.unique(labels1)
 
-    unique_val = np.unique(labels)
-    print(f"\n uni val = {unique_val}")
+    # Get total pixel count for each object
     for i in unique_val:
         if i != 0:
-            count = np.count_nonzero(labels == i)
-            print(f"\n count = {count}")
+            count = np.count_nonzero(labels1 == i)
             pixel_count_objects.append(count)
-            # if count < size_threshold:
-            #     filter_out_label.append(i)
 
-    print(f"\count array px = {max(pixel_count_objects)/2}")
-
+    # For Hand/Gun image hand has max pixels thus filter everything smaller than hand_pixel/2
     for i in unique_val:
-        count = np.count_nonzero(labels == i)
+        count = np.count_nonzero(labels1 == i)
         if count < max(pixel_count_objects)/2:
             filter_out_label.append(i)
 
+    # Set filtered out objects to black pixels
     for u in range(height):
         for v in range(width):
-            if labels[u,v] in filter_out_label:
-                labels[u,v] = 0
+            if labels1[u,v] in filter_out_label:
+                labels1[u,v] = 0
 
-    return labels
-
-
+    return labels1
 
 if __name__ == '__main__':
     main()
