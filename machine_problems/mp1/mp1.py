@@ -3,9 +3,9 @@ import numpy as np
 
 def main():
     # Load in images
-    face_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp1/face.bmp', cv2.IMREAD_GRAYSCALE)
-    gun_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp1/gun.bmp', cv2.IMREAD_GRAYSCALE)
-    test_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp1/test.bmp', cv2.IMREAD_GRAYSCALE)
+    face_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp1/test_images/face.bmp', cv2.IMREAD_GRAYSCALE)
+    gun_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp1/test_images/gun.bmp', cv2.IMREAD_GRAYSCALE)
+    test_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp1/test_images/test.bmp', cv2.IMREAD_GRAYSCALE)
 
     # Preform Sequential connected component labeling
     labels_face = seq_CCL(face_img)
@@ -26,16 +26,16 @@ def main():
     labels_gun_filter = size_filter(labels_gun, 224)
     labels_gun_filter = cv2.resize(labels_gun_filter, (250, 250))
 
-    # Combine the images into one horizontally
+    # Combine the images into three rows
     hconcat1 = cv2.hconcat([np.uint8(orginal_face_img), np.uint8(orginal_gun_img), np.uint8(orginal_test_img)])
     hconcat2 = cv2.hconcat([np.uint8(labels_face), np.uint8(labels_gun), np.uint8(labels_test)])
     hconcat3 = cv2.hconcat([np.uint8(labels_face), np.uint8(labels_gun_filter), np.uint8(labels_test)])
-    # Concatenate images vertically
+    # Stack the three rows in a grid
     final_image = cv2.vconcat([hconcat1,hconcat2,hconcat3])
-    # Display the final image in a window
+    # Display images grid
     cv2.imshow('[Row1] - Original, [Row2] - Sequential connected component labeling, [Row3] - Size filter', final_image)
 
-    # Key press and close the window
+    # Wait for a key press to close the window
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
@@ -45,7 +45,7 @@ def seq_CCL(image):
     height, width = image.shape
     labels = np.zeros((height, width)) # Lables for each pixel
     L_num = 0
-    # Empty dictionary to hold all the sets/quivalence tables
+    # Empty dictionary to hold all the sets/equivalence tables
     number_sets = {}
 
     for u in range(height):
@@ -59,12 +59,12 @@ def seq_CCL(image):
                 elif Lu != Ll and not (Lu and Ll): # Either is 0
                     labels[u,v] = max(Lu, Ll)
 
-                elif Lu != Ll and Lu > 0 and Ll > 0: # Both has labels and an item should be added to quivalence tables
+                elif Lu != Ll and Lu > 0 and Ll > 0: # Both has labels and an item should be added to equivalence tables
                     labels[u,v] = min(Lu, Ll)
-                    # Set these equal to each other in the quivalence tables
+                    # Set these equal to each other in the equivalence tables
                     number_sets = E_table(Lu, Ll, number_sets)
 
-                    # This is a easy way instead of using sets
+                    # This is an easy way instead of using sets
                     # if Lu == labels[u,v]:
                     #     Ll = Lu
                     # else:
@@ -102,7 +102,7 @@ def seq_CCL(image):
 
     return labels
 
-''' Create and add to quivalence tables '''
+''' Create and add to equivalence tables '''
 def E_table(Lu, Ll, number_sets):
 
     create_new_set = False # Create new set flag
@@ -145,7 +145,7 @@ def size_filter(labels, size_threshold): # Threshold can also be used
     # For Hand/Gun image hand has max pixels thus filter everything smaller than hand_pixel/2
     for i in unique_val:
         count = np.count_nonzero(labels1 == i)
-        if count < max(pixel_count_objects)/2:
+        if count < max(pixel_count_objects)/2: # Use max(pixel_count_objects)/2 or size_threshold for filtering
             filter_out_label.append(i)
 
     # Set filtered out objects to black pixels
