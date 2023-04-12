@@ -7,18 +7,21 @@ def main():
     gun_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp2/test_images/gun.bmp', cv2.IMREAD_GRAYSCALE)
     palm_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp2/test_images/palm.bmp', cv2.IMREAD_GRAYSCALE)
 
+    # 3x3 Square
+    """
+    1 1 1
+    1 1 1
+    1 1 1
+    """
     SE = [[-1,-1],[-1,0],[-1,-1],[0,-1],[0,0],[0,1],[1,-1],[1,0],[1,1]]
 
-    # for se in SE:
-    #     x = se[0] + 1
-    #     y = se[1] + 1
-    #     print(f"\n se: {x,y}")
 
+    # Dilation
     gun_img_dilation = Dilation(gun_img, SE)
 
     # Display images grid
-    cv2.imshow('gun_img:', gun_img)
-    cv2.imshow('gun_img_dilation:', gun_img_dilation)
+    gun = cv2.hconcat([np.uint8(gun_img), np.uint8(gun_img_dilation)])
+    cv2.imshow('gun_img: 1: Normal 2: Dilation', gun)
 
     # Wait for a key press to close the window
     cv2.waitKey(0)
@@ -26,7 +29,13 @@ def main():
 
 
 
-'''  '''
+"""
+Dilation of an image
+
+args:
+    - image: (cv2.IMREAD_GRAYSCALE) A bit map image
+    - SE: (List) Structured element coordinates in a list
+"""
 def Dilation(image, SE): # SE -> Structured Element
     # Get image dimensions
     height, width = image.shape
