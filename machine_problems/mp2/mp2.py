@@ -13,7 +13,45 @@ def main():
     1 1 1
     1 1 1
     """
-    SE = [[-1,-1],[-1,0],[-1,-1],[0,-1],[0,0],[0,1],[1,-1],[1,0],[1,1]]
+    # SE = [[-1,-1],[-1,0],[-1,1],
+    #       [0 ,-1],[0 ,0],[0 ,1],
+    #       [1 ,-1],[1 ,0],[1 ,1]]
+
+    # Star
+    """
+    0 1 0
+    1 1 1
+    0 1 0
+    """
+    # SE = [[-1,0],[0,-1],[0,0],[0,1],[1,0]]
+
+    # Star with 3x3 in middle
+    """
+    0 1 1 1 0
+    1 1 1 1 1
+    1 1 1 1 1
+    1 1 1 1 1
+    0 1 1 1 0
+    """
+    SE = [        [-2,-1],[-2,0],[-2,1],
+          [-1,-2],[-1,-1],[-1,0],[-1,1],[-1,2],
+          [0 ,-2],[0 ,-1],[0 ,0],[0 ,1],[0 ,2],
+          [1 ,-2],[1 ,-1],[1 ,0],[1 ,1],[1 ,2],
+                  [2 ,-1],[2 ,0],[2 ,1]        ]
+
+    # Star with 5x5 in middle
+    """
+    1 1 1 1 1
+    1 1 1 1 1
+    1 1 1 1 1
+    1 1 1 1 1
+    1 1 1 1 1
+    """
+    # SE = [[-2,-2],[-2,-1],[-2,0],[-2,1],[-2,2],
+    #       [-1,-2],[-1,-1],[-1,0],[-1,1],[-1,2],
+    #       [0 ,-2],[0 ,-1],[0 ,0],[0 ,1],[0 ,2],
+    #       [1 ,-2],[1 ,-1],[1 ,0],[1 ,1],[1 ,2],
+    #       [2 ,-2],[2 ,-1],[2 ,0],[2 ,1],[2 ,2]]
 
     # Dilation
     gun_img_dilation = Dilation(gun_img, SE)
@@ -31,15 +69,21 @@ def main():
     gun_img_closing = Closing(gun_img, SE)
     palm_img_closing = Closing(palm_img, SE)
 
+    # Boundary
+    gun_img_boundary = Boundary(gun_img_closing, SE)
+    palm_img_boundary = Boundary(palm_img_closing, SE)
+
     # Display images grid
     gun = cv2.hconcat([np.uint8(gun_img), np.uint8(gun_img_dilation), np.uint8(gun_img_erosion), \
-                       np.uint8(gun_img_opening), np.uint8(gun_img_closing)])
+                       np.uint8(gun_img_opening), np.uint8(gun_img_closing), np.uint8(gun_img_boundary)])
     palm = cv2.hconcat([np.uint8(palm_img), np.uint8(palm_img_dilation), np.uint8(palm_img_erosion),\
-                        np.uint8(palm_img_opening), np.uint8(palm_img_closing)])
+                        np.uint8(palm_img_opening), np.uint8(palm_img_closing), np.uint8(palm_img_boundary)])
 
     # Display
-    cv2.imshow('gun_img: 1: Normal 2: Dilation 3: Erosion 4: Opening 5: Closing 6: Boundary', gun)
-    cv2.imshow('palm_img: 1: Normal 2: Dilation 3: Erosion 4: Opening 5: Closing 6: Boundary', palm)
+    cv2.imshow(' 1: Normal                      2: Dilation                     3: Erosion\
+                4: Opening                           5: Closing                 6: Boundary', gun)
+    cv2.imshow('1: Normal                      2: Dilation                     3: Erosion\
+                4: Opening                           5: Closing                 6: Boundary', palm)
 
     # Wait for a key press to close the window
     cv2.waitKey(0)
@@ -98,7 +142,7 @@ def Erosion(image, SE):
                             subset = False
                 # If SE is not a subset if the object then make the pixel black
                 if subset == False:
-                    erosion[x,y] = 0
+                    erosion[u,v] = 0
 
     return erosion
 
@@ -138,6 +182,23 @@ def Closing(image, SE):
 
     return closing
 
+"""
+Get boundary of an object in an image
+
+args:
+    - image: (cv2.IMREAD_GRAYSCALE) A bit map image
+    - SE: (List) Structured element coordinates in a list
+"""
+def Boundary(image, SE):
+
+    # Boundary image
+    erosion = image.copy()
+
+    # Boundary = Image - Erosion(Image)
+    erosion = Erosion(erosion, SE)
+    boundary = image - erosion
+
+    return boundary
 
 
 if __name__ == '__main__':
