@@ -13,6 +13,9 @@ def main():
     # Plot histogram of original image
     image_histogram(moon_img)
 
+    # Preform histogram equalization to improve image quality
+    histogram_equalization(moon_img)
+
 
 
     # Display images grid
@@ -26,11 +29,35 @@ def main():
 
 
 """
-<description>
+Image Histogram Equalization
 
 args:
-    - <arg_name>: (type) <description>
+    - image: (cv2.IMREAD_GRAYSCALE) Gray scale image
 """
+def histogram_equalization(image):
+    # Input Gray Level [0,L1]
+    L1 = 255
+    # Output Gray Level [0,L2]
+    L2 = 255
+
+    # Histogram intensity data from image
+    hist, bins = np.histogram(image, bins=256, range=(0, 256))
+    # Calculate cumulative distribution
+    cumulative_hist = np.cumsum(hist)
+    # Normalize the cumulative values
+    cumulative_normalized = cumulative_hist / np.max(cumulative_hist)
+    # Plot cumulative distribution
+    plt.figure()
+    plt.plot(bins[:-1], cumulative_normalized)
+    # Set the axis labels and title
+    plt.xlabel('Input image pixel intensity')
+    plt.ylabel('Output image pixel intensity normalized')
+    plt.title('Cumulative histogram distribution')
+    # Show plots
+    plt.show()
+
+    print(f"\n cumulative_hist = {cumulative_normalized}")
+
 
 
 """
@@ -50,7 +77,7 @@ def image_histogram(image):
     plt.ylabel('Frequency')
     plt.title('Histogram of moon image')
     # Show the plot
-    plt.show()
+    # plt.show()
 
 
 if __name__ == '__main__':
