@@ -52,7 +52,7 @@ def histogram_equalization(image):
     histogram_equalization_image = image.copy()
     # Get image dimensions
     height, width = histogram_equalization_image.shape
-    # Preform histogram equalization
+    # Preform histogram equalization / Transfer function
     for u in range(height):
         for v in range(width):
             histogram_equalization_image[u,v] = cumulative_normalized[histogram_equalization_image[u,v]]*L2
