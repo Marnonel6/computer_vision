@@ -26,13 +26,35 @@ def main():
     joy1_hsv_img = cv2.cvtColor(joy1_img, cv2.COLOR_RGB2HSV)
     pointer1_hsv_img = cv2.cvtColor(pointer1_img, cv2.COLOR_RGB2HSV)
 
-    # Detect human skin color
+    cv2.imshow('Test Images1', joy1_img)
     joy1_human_skin_img = detect_human_skin(joy1_hsv_img, joy1_img, trained_hist_model)
+
+
+    # Detect human skin color
+    # Convert the jpg image to png format
+    png_image = img_pil.convert('RGB')
+
+    # Convert PIL image to NumPy array
+    img_np = np.array(png_image)
+
+    # Convert RGB to BGR (OpenCV uses BGR color format)
+    img_np = img_np[:, :, ::-1].copy()
+    # cv2.imshow('rgb image', img_np)
+
+    # print(f"\n img_np --------------- {img_np[0][0]}")
+
+    # Convert BGR image to HSV
+    # hsv_img = cv2.cvtColor(img_np, cv2.COLOR_BGR2HSV)
+    """ WORKING START """
+    # hsv_img = cv2.cvtColor(img_np, cv2.COLOR_RGB2HSV) # TODO
+    # joy1_human_skin_img = detect_human_skin(hsv_img, img_np, trained_hist_model) # TODO
+    """ WORKING END """
 
     # # Display images grid
     # test_images = cv2.hconcat([np.uint8(gun1_img), np.uint8(joy1_img), np.uint8(pointer1_img)])
     # Display
     # cv2.imshow('Test Images', test_images)
+
     cv2.imshow('Test Images', joy1_human_skin_img)
     # cv2.imshow('Train Images', train1_img)
     # Wait for a key press to close the window
@@ -325,7 +347,8 @@ def train_histogram():
 
             """ ONE IMAGE """
             # Convert the jpg image to png format
-            png_image = image.convert('RGBA')
+            # png_image = image.convert('RGBA') # TODO
+            png_image = image.convert('RGB')
 
             # Convert PIL image to NumPy array
             img_np = np.array(png_image)
@@ -334,7 +357,8 @@ def train_histogram():
             img_np = img_np[:, :, ::-1].copy()
 
             # Convert BGR image to HSV
-            hsv_img = cv2.cvtColor(img_np, cv2.COLOR_BGR2HSV)
+            # hsv_img = cv2.cvtColor(img_np, cv2.COLOR_BGR2HSV) # TODO
+            hsv_img = cv2.cvtColor(img_np, cv2.COLOR_RGB2HSV)
 
             # cv2.imshow('Train Images', hsv_img)
             # # Wait for a key press to close the window
@@ -515,13 +539,14 @@ def detect_human_skin(human_skin_image_hsv, rgb_image, trained_hist_model):
             # Get pixel value at (i, j)
             saturation, hue = human_skin_image_hsv[i, j, 0], human_skin_image_hsv[i, j, 1]
             pixel_conf = trained_hist_model[saturation][hue]
-            if pixel_conf > 0.01:
+            if pixel_conf > 0.1:
                 continue
                 # print(f"\n pixel SAT: {saturation}  HUE: {hue}")
                 # print(f"\n pixel_conf: {pixel_conf}")
             else: # Make pixels black
                 # print(f"\n rgb_image[i, j] before: {rgb_image[i, j]}")
                 rgb_image[i, j] = [0, 0, 0]
+                # continue
                 # print(f"\n rgb_image[i, j] after: {rgb_image[i, j]}")
 
     return rgb_image
