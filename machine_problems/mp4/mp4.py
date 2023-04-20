@@ -48,7 +48,7 @@ def train_histogram():
     Flag_first_img = True
 
     # Only load X amount of images
-    training_size = 100
+    training_size = 10
     image_count = 0
 
     """ Using directory """
@@ -98,7 +98,7 @@ def train_histogram():
             #             Saturation.append(img_array[i][j][1])
 
             # # Create a 2D histogram (ONE IMAGE)
-            # hist, _, _ = np.histogram2d(H, S, bins=[np.arange(0, 257), np.arange(0, 257)])
+            # hist, _, _ = np.histogram2d(Hue, Saturation, bins=[np.arange(0, 257), np.arange(0, 257)])
             """ 1.2 END """
 
             if Flag_first_img == True:
@@ -133,6 +133,9 @@ def train_histogram():
     # Plot the 2D histogram
     plt.imshow(norm_trained_model)
     plt.colorbar()
+    plt.xlabel('Saturation')
+    plt.ylabel('Hue')
+    # ax.set_zlabel('Count')
     plt.show()
 
     return norm_trained_model
