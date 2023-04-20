@@ -273,6 +273,5 @@ def detect_human_skin_BGR(human_skin_image, rgb_image, trained_hist_model):
     return rgb_image
 
 
-
 if __name__ == '__main__':
     main()
