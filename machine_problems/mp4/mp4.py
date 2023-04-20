@@ -11,15 +11,19 @@ def main():
     gun1_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/test_images/gun1.bmp', cv2.IMREAD_COLOR)
     joy1_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/test_images/joy1.bmp', cv2.IMREAD_COLOR)
     pointer1_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/test_images/pointer1.bmp', cv2.IMREAD_COLOR)
+    # Put images next to each other
+    test_images = cv2.hconcat([np.uint8(gun1_img), np.uint8(joy1_img), np.uint8(pointer1_img)])
 
     # Convert BGR image to HSV color space
     gun1_hsv_img = cv2.cvtColor(gun1_img, cv2.COLOR_BGR2HSV)
     joy1_hsv_img = cv2.cvtColor(joy1_img, cv2.COLOR_BGR2HSV)
     pointer1_hsv_img = cv2.cvtColor(pointer1_img, cv2.COLOR_BGR2HSV)
 
-    # Train histogram model
+    """ 1) Train histogram model (Train this and then comment this line out and just load trained model) """
     trained_hist_model = train_histogram()
-    # train_image_histogram(pointer1_img) # TODO
+
+    """ 2) Load trained model """
+    trained_hist_model = np.load("trained_hist_model.npy")
 
     # Detect human skin color
     gun1_human_skin_img = detect_human_skin(gun1_hsv_img, gun1_img, trained_hist_model)
@@ -27,7 +31,6 @@ def main():
     pointer1_human_skin_img = detect_human_skin(pointer1_hsv_img, pointer1_img, trained_hist_model)
 
     # Display images grid
-    test_images = cv2.hconcat([np.uint8(gun1_img), np.uint8(joy1_img), np.uint8(pointer1_img)])
     result_images = cv2.hconcat([np.uint8(gun1_human_skin_img), np.uint8(joy1_human_skin_img), np.uint8(pointer1_human_skin_img)])
     final_images = cv2.vconcat([test_images, result_images])
     # Display
@@ -36,261 +39,16 @@ def main():
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-
 """
-Plot histogram of original image
-
-args:
-    - image: (cv2.IMREAD_GRAYSCALE) Gray scale image
+Get a 2D histogram on a training dataset of images with hue and saturation on the two axis.
 """
-def train_image_histogram(image):
-# def train_image_histogram(image1, image2):
-    # # Histogram of pixel intensities
-    # histogram, bins = np.histogram(image.ravel(), bins=256, range=[0, 256])
-
-    # # Plot the histogram
-    # plt.figure()
-    # plt.plot(histogram, color='black')
-    # # Set the axis labels and title
-    # plt.xlabel('Pixel Intensity')
-    # plt.ylabel('Frequency')
-    # plt.title('Original Histogram of image intensities')
-    # # Show plots
-    # plt.show()
-
-
-
-    # Set the range for Hue and Saturation
-    h_range = [0, 180]
-    s_range = [5, 256] # Set 5 as minimum to ignore the white background in Test images (White saturation = 0)
-
-    # Set the number of bins for Hue and Saturation
-    h_bins = 180
-    s_bins = 256
-
-    """ ONE IMAGE """
-    # # Convert the jpg image to png format
-    # png_image = image.convert('RGBA')
-
-    # # Convert PIL image to NumPy array
-    # img_np = np.array(png_image)
-
-    # # Convert RGB to BGR (OpenCV uses BGR color format)
-    # img_np = img_np[:, :, ::-1].copy()
-
-    # # Convert BGR image to HSV
-    # hsv_img = cv2.cvtColor(img_np, cv2.COLOR_BGR2HSV)
-
-    # cv2.imshow('Train Images', hsv_img)
-    # # Wait for a key press to close the window
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-
-    # Convert BGR image to HSV
-    hsv_img = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-
-    # Create a 3D histogram (ONE IMAGE)
-    hist, _, _ = np.histogram2d(hsv_img[:, :, 0].ravel(),
-                                hsv_img[:, :, 1].ravel(),
-                                bins=[h_bins, s_bins],
-                                range=[h_range, s_range])
-
-    # # Plot the 3D histogram
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    X, Y = np.meshgrid(np.arange(h_bins), np.arange(s_bins))
-    ax.plot_surface(X, Y, hist.T, cmap='jet')
-    ax.set_xlabel('Hue')
-    ax.set_ylabel('Saturation')
-    ax.set_zlabel('Count')
-    plt.show()
-
-    """ ONE IMAGE """
-
-    """ TWO IMAGES """
-    # # Convert the jpg image to png format
-    # png_image1 = image1.convert('RGBA')
-
-    # # Convert PIL image to NumPy array
-    # img_np1 = np.array(png_image1)
-
-    # # Convert RGB to BGR (OpenCV uses BGR color format)
-    # img_np1 = img_np1[:, :, ::-1].copy()
-
-    # # Convert the jpg image to png format
-    # png_image2 = image2.convert('RGBA')
-
-    # # Convert PIL image to NumPy array
-    # img_np2 = np.array(png_image2)
-
-    # # Convert RGB to BGR (OpenCV uses BGR color format)
-    # img_np2 = img_np2[:, :, ::-1].copy()
-
-    # # Convert BGR image to HSV
-    # hsv_img1 = cv2.cvtColor(img_np1, cv2.COLOR_RGB2HSV)
-    # hsv_img2 = cv2.cvtColor(img_np2, cv2.COLOR_RGB2HSV)
-
-    # # Concatenate the Hue and Saturation channels of both images
-    # hue_sat1 = np.concatenate((hsv_img1[..., 0], hsv_img1[..., 1]), axis=1)
-    # hue_sat2 = np.concatenate((hsv_img2[..., 0], hsv_img2[..., 1]), axis=1)
-    # hue_sat = np.concatenate((hue_sat1, hue_sat2), axis=0)
-
-    # # Create a 3D histogram - (TWO IMAGES)
-    # hist, _, _ = np.histogram2d(hue_sat[..., 0].ravel(),
-    #                             hue_sat[..., 1].ravel(),
-    #                             bins=[h_bins, s_bins],
-    #                             range=[h_range, s_range])
-    """ TWO IMAGES """
-
-    """ TWO IMAGES """
-    # # Convert BGR image to HSV
-    # hsv_img1 = cv2.cvtColor(image1, cv2.COLOR_RGB2HSV)
-    # hsv_img2 = cv2.cvtColor(image2, cv2.COLOR_RGB2HSV)
-
-    # # Concatenate the Hue and Saturation channels of both images
-    # hue_sat1 = np.concatenate((hsv_img1[..., 0], hsv_img1[..., 1]), axis=1)
-    # hue_sat2 = np.concatenate((hsv_img2[..., 0], hsv_img2[..., 1]), axis=1)
-    # hue_sat = np.concatenate((hue_sat1, hue_sat2), axis=0)
-
-    # # Create a 3D histogram - (TWO IMAGES)
-    # hist, _, _ = np.histogram2d(hue_sat[..., 0].ravel(),
-    #                             hue_sat[..., 1].ravel(),
-    #                             bins=[h_bins, s_bins],
-    #                             range=[h_range, s_range])
-    """ TWO IMAGES """
-
-    # # Plot the 3D histogram
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # X, Y = np.meshgrid(np.arange(h_bins), np.arange(s_bins))
-    # ax.plot_surface(X, Y, hist.T, cmap='jet')
-    # ax.set_xlabel('Hue')
-    # ax.set_ylabel('Saturation')
-    # ax.set_zlabel('Count')
-    # plt.show()
-
-
-
-    """ ONE IMAGE """
-    # # Convert the jpg image to png format
-    # png_image = image1.convert('RGBA')
-
-    # # Convert PIL image to NumPy array
-    # img_np = np.array(png_image)
-
-    # # Convert RGB to BGR (OpenCV uses BGR color format)
-    # img_np = img_np[:, :, ::-1].copy()
-
-    # # Convert BGR image to HSV
-    # hsv_img = cv2.cvtColor(img_np, cv2.COLOR_BGR2HSV)
-
-    # # cv2.imshow('Train Images', hsv_img)
-    # # # Wait for a key press to close the window
-    # # cv2.waitKey(0)
-    # # cv2.destroyAllWindows()
-
-    # # Create a 3D histogram (ONE IMAGE)
-    # hist1, _, _ = np.histogram2d(hsv_img[:, :, 0].ravel(),
-    #                             hsv_img[:, :, 1].ravel(),
-    #                             bins=[h_bins, s_bins],
-    #                             range=[h_range, s_range])
-    """ ONE IMAGE """
-
-    # # Plot the 3D histogram
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # X, Y = np.meshgrid(np.arange(h_bins), np.arange(s_bins))
-    # ax.plot_surface(X, Y, hist1.T, cmap='jet')
-    # ax.set_xlabel('Hue')
-    # ax.set_ylabel('Saturation')
-    # ax.set_zlabel('Count')
-    # plt.show()
-
-    # """ ONE IMAGE """
-    # # Convert the jpg image to png format
-    # png_image2 = image2.convert('RGBA')
-
-    # # Convert PIL image to NumPy array
-    # img_np2 = np.array(png_image2)
-
-    # # Convert RGB to BGR (OpenCV uses BGR color format)
-    # img_np2 = img_np2[:, :, ::-1].copy()
-
-    # # Convert BGR image to HSV
-    # hsv_img2 = cv2.cvtColor(img_np2, cv2.COLOR_BGR2HSV)
-
-    # # cv2.imshow('Train Images', hsv_img)
-    # # # Wait for a key press to close the window
-    # # cv2.waitKey(0)
-    # # cv2.destroyAllWindows()
-
-    # # Create a 3D histogram (ONE IMAGE)
-    # hist2, _, _ = np.histogram2d(hsv_img2[:, :, 0].ravel(),
-    #                             hsv_img2[:, :, 1].ravel(),
-    #                             bins=[h_bins, s_bins],
-    #                             range=[h_range, s_range])
-    # """ ONE IMAGE """
-
-    # # Plot the 3D histogram
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # X, Y = np.meshgrid(np.arange(h_bins), np.arange(s_bins))
-    # ax.plot_surface(X, Y, hist2.T, cmap='jet')
-    # ax.set_xlabel('Hue')
-    # ax.set_ylabel('Saturation')
-    # ax.set_zlabel('Count')
-    # plt.show()
-
-    # print(f"\n hist1 shape = {hist1.shape}")
-    # print(f"\n hist2 shape = {hist2.shape}")
-
-    # hist3 = hist1+hist2
-
-    # print(f"\n hist3 shape = {hist3.shape}")
-
-    # print(f"\n hist3 index [129][136] = {hist3[129][136]}")
-
-    # # Plot the 3D histogram
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # X, Y = np.meshgrid(np.arange(h_bins), np.arange(s_bins))
-    # ax.plot_surface(X, Y, hist3.T, cmap='jet')
-    # ax.set_xlabel('Hue')
-    # ax.set_ylabel('Saturation')
-    # ax.set_zlabel('Count')
-    # plt.show()
-
-
-    # # Normalize the array
-    # norm_arr = hist3 / np.max(hist3)
-
-    # print(f"\n norm_arr index [129][136] = {norm_arr[129][136]}")
-
-    # # Plot the 3D histogram
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # X, Y = np.meshgrid(np.arange(h_bins), np.arange(s_bins))
-    # ax.plot_surface(X, Y, norm_arr.T, cmap='jet')
-    # ax.set_xlabel('Hue')
-    # ax.set_ylabel('Saturation')
-    # ax.set_zlabel('Count')
-    # plt.show()
-
-
-"""
-Plot histogram of original image
-
-args:
-    - image: (cv2.IMREAD_GRAYSCALE) Gray scale image
-"""
-# def train_image_histogram(image):
 def train_histogram():
 
     # First image flag
     Flag_first_img = True
 
     # Only load X amount of images
-    training_size = 10
+    training_size = 100
     image_count = 0
 
     """ Using directory """
@@ -308,43 +66,39 @@ def train_histogram():
     for img_path in img_list:
         if os.path.exists(img_path):
 
-            # image = Image.open(img_path)
             image = cv2.imread(img_path)
             # Convert BGR image to HSV
-            hsv_img = cv2.cvtColor(image, cv2.COLOR_BGR2HSV) # TODO
+            hsv_img = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-            """ 1.1 START """
-            H = []
-            S = []
-            im_input = np.array(hsv_img)
-            x = np.shape(im_input)[0]-1
-            y = np.shape(im_input)[1]-1
-            # new_img = np.zeros((x+1,y+1))
-            for i in range(x+1):
-                for j in range(y+1):
-                    if im_input[i][j][1]>30:
-                        H.append(im_input[i][j][0])
-                        S.append(im_input[i][j][1])
+            """ 1.1 START - Very fast but complicated, because of range values change """
+            # Set the range for Hue and Saturation
+            s_range = [25, 256] # Set 25 as minimum to ignore the white/shadow gray background in Test images (White saturation = 0)
+            # NB now saturation value of 25 corresponds to 0 index in histogram
+            h_range = [0, 256]
+            h_bins = 257
+            s_bins = 257
 
-            # Create a 2D histogram (ONE IMAGE)
-            hist, _, _ = np.histogram2d(H,
-                                        S,
-                                        bins=[np.arange(0, 257), np.arange(0, 257)])
+            # Create a 2D histogram
+            hist, _, _ = np.histogram2d(hsv_img[:, :, 0].ravel(),
+                                        hsv_img[:, :, 1].ravel(),
+                                        bins=[np.arange(0, h_bins), np.arange(25, s_bins)],
+                                        range=[h_range, s_range])
             """ 1.1 END """
 
-            """ 1.2 START """
-            # # Set the range for Hue and Saturation
-            # s_range = [30, 256] # Set 5 as minimum to ignore the white background in Test images (White saturation = 0)
-            # h_range = [0, 256]
-            # # Set the number of bins for Hue and Saturation
-            # h_bins = 256
-            # s_bins = 256
+            """ 1.2 START - Very slow use only 10 training images max - Shantao"""
+            # Hue = []
+            # Saturation = []
+            # img_array = np.array(hsv_img)
+            # x = np.shape(img_array)[0]-1
+            # y = np.shape(img_array)[1]-1
+            # for i in range(x+1):
+            #     for j in range(y+1):
+            #         if img_array[i][j][1]>25:
+            #             Hue.append(img_array[i][j][0])
+            #             Saturation.append(img_array[i][j][1])
 
-            # # Create a 2D histogram
-            # hist, _, _ = np.histogram2d(hsv_img[:, :, 0].ravel(),
-            #                             hsv_img[:, :, 1].ravel(),
-            #                             bins=[h_bins, s_bins],
-            #                             range=[h_range, s_range])
+            # # Create a 2D histogram (ONE IMAGE)
+            # hist, _, _ = np.histogram2d(H, S, bins=[np.arange(0, 257), np.arange(0, 257)])
             """ 1.2 END """
 
             if Flag_first_img == True:
@@ -363,11 +117,14 @@ def train_histogram():
     # Normalize trained dataset model
     norm_trained_model = train_hist / np.max(train_hist)
 
-    # Plot the 3D histogram
+    # Save model
+    np.save("trained_hist_model.npy", norm_trained_model)
+
+    # # Plot the 3D histogram
     # fig = plt.figure()
     # ax = fig.add_subplot(111, projection='3d')
     # X, Y = np.meshgrid(np.arange(h_bins), np.arange(s_bins))
-    # ax.plot_surface(X, Y, norm_arr.T, cmap='jet')
+    # ax.plot_surface(X, Y, norm_trained_model.T, cmap='jet')
     # ax.set_xlabel('Hue')
     # ax.set_ylabel('Saturation')
     # ax.set_zlabel('Count')
@@ -378,15 +135,17 @@ def train_histogram():
     plt.colorbar()
     plt.show()
 
-    print(f"\n trained model size = {norm_trained_model.shape}")
-
     return norm_trained_model
 
 """
-Plot histogram of original image
+Detect human skin with a trained model
 
 args:
-    - image: (cv2.IMREAD_GRAYSCALE) Gray scale image
+    - human_skin_image_hsv: (cv2 - HSV image) HSV image of the desired picture used for detection
+    - rgb_image: (cv2.imread(cv2.IMREAD_COLOR)) RGB image of the desired picture used for detection
+    - trained_hist_model: (np.array()) Trained 2D histogram model
+return:
+    - rgb_image: (cv2.imread(cv2.IMREAD_COLOR)) RGB image with only the skin color left
 """
 def detect_human_skin(human_skin_image_hsv, rgb_image, trained_hist_model):
 
@@ -394,11 +153,15 @@ def detect_human_skin(human_skin_image_hsv, rgb_image, trained_hist_model):
     for i in range(human_skin_image_hsv.shape[0]):
         for j in range(human_skin_image_hsv.shape[1]):
             # Get pixel value at (i, j)
-            saturation, hue = human_skin_image_hsv[i, j, 0], human_skin_image_hsv[i, j, 1]
-            pixel_conf = trained_hist_model[saturation][hue]
-            if pixel_conf > 0.1:
-                continue
-            else: # Make pixels black
+            hue, saturation = human_skin_image_hsv[i, j, 0], human_skin_image_hsv[i, j, 1]
+            saturation -= 25
+            if saturation > 0:
+                pixel_conf = trained_hist_model[hue][saturation]
+                if pixel_conf > 0.1:
+                    continue
+                else: # Make pixels black
+                    rgb_image[i, j] = [0, 0, 0]
+            else:
                 rgb_image[i, j] = [0, 0, 0]
 
     return rgb_image
