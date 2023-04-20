@@ -20,15 +20,21 @@ def main():
     pointer1_hsv_img = cv2.cvtColor(pointer1_img, cv2.COLOR_BGR2HSV)
 
     """ 1) Train histogram model (Train this and then comment this line out and just load trained model) """
-    trained_hist_model = train_histogram()
+    trained_hist_model = train_histogram_HSV()        # Hue and Saturation
+    # trained_hist_model_BG = train_histogram_BGR()   # Blue and Green
 
     """ 2) Load trained model """
     trained_hist_model = np.load("trained_hist_model.npy")
+    trained_hist_model_BG = np.load("trained_hist_model_Blue_Green.npy")
 
-    # Detect human skin color
+    """ Detect human skin color with HSV color model """
     gun1_human_skin_img = detect_human_skin(gun1_hsv_img, gun1_img, trained_hist_model)
     joy1_human_skin_img = detect_human_skin(joy1_hsv_img, joy1_img, trained_hist_model)
     pointer1_human_skin_img = detect_human_skin(pointer1_hsv_img, pointer1_img, trained_hist_model)
+    """ Detect human skin color with Blue Green color model """
+    # gun1_human_skin_img = detect_human_skin_BGR(gun1_img, gun1_img, trained_hist_model_BG)
+    # joy1_human_skin_img = detect_human_skin_BGR(joy1_img, joy1_img, trained_hist_model_BG)
+    # pointer1_human_skin_img = detect_human_skin_BGR(pointer1_img, pointer1_img, trained_hist_model_BG)
 
     # Display images grid
     result_images = cv2.hconcat([np.uint8(gun1_human_skin_img), np.uint8(joy1_human_skin_img), np.uint8(pointer1_human_skin_img)])
@@ -42,7 +48,7 @@ def main():
 """
 Get a 2D histogram on a training dataset of images with hue and saturation on the two axis.
 """
-def train_histogram():
+def train_histogram_HSV():
 
     # First image flag
     Flag_first_img = True
@@ -71,8 +77,9 @@ def train_histogram():
             hsv_img = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
             """ 1.1 START - Very fast but complicated, because of range values change """
+            saturation_filter = 25
             # Set the range for Hue and Saturation
-            s_range = [25, 256] # Set 25 as minimum to ignore the white/shadow gray background in Test images (White saturation = 0)
+            s_range = [saturation_filter, 256] # Set 25 as minimum to ignore the white/shadow gray background in Test images (White saturation = 0)
             # NB now saturation value of 25 corresponds to 0 index in histogram
             h_range = [0, 256]
             h_bins = 257
@@ -81,24 +88,22 @@ def train_histogram():
             # Create a 2D histogram
             hist, _, _ = np.histogram2d(hsv_img[:, :, 0].ravel(),
                                         hsv_img[:, :, 1].ravel(),
-                                        bins=[np.arange(0, h_bins), np.arange(25, s_bins)],
+                                        bins=[np.arange(0, h_bins), np.arange(saturation_filter, s_bins)],
                                         range=[h_range, s_range])
             """ 1.1 END """
 
-            """ 1.2 START - Very slow use only 10 training images max - Shantao"""
+            """ 1.2 START - Very slow use only 10 training images max """
             # Hue = []
             # Saturation = []
-            # img_array = np.array(hsv_img)
-            # x = np.shape(img_array)[0]-1
-            # y = np.shape(img_array)[1]-1
+            # x, y = np.shape(hsv_img)[0]-1, np.shape(hsv_img)[1]-1
             # for i in range(x+1):
             #     for j in range(y+1):
-            #         if img_array[i][j][1]>25:
-            #             Hue.append(img_array[i][j][0])
-            #             Saturation.append(img_array[i][j][1])
+            #         if hsv_img[i][j][1]>25:
+            #             Hue.append(hsv_img[i][j][0])
+            #             Saturation.append(hsv_img[i][j][1])
 
             # # Create a 2D histogram (ONE IMAGE)
-            # hist, _, _ = np.histogram2d(Hue, Saturation, bins=[np.arange(0, 257), np.arange(0, 257)])
+            # hist, _, _ = np.histogram2d(Hue, Saturation, bins=[np.arange(0, h_bins), np.arange(0, s_bins)])
             """ 1.2 END """
 
             if Flag_first_img == True:
@@ -135,7 +140,6 @@ def train_histogram():
     plt.colorbar()
     plt.xlabel('Saturation')
     plt.ylabel('Hue')
-    # ax.set_zlabel('Count')
     plt.show()
 
     return norm_trained_model
@@ -168,6 +172,106 @@ def detect_human_skin(human_skin_image_hsv, rgb_image, trained_hist_model):
                 rgb_image[i, j] = [0, 0, 0]
 
     return rgb_image
+
+
+"""
+Get a 2D histogram on a training dataset of images with hue and saturation on the two axis.
+"""
+def train_histogram_BGR():
+
+    # First image flag
+    Flag_first_img = True
+
+    # Only load X amount of images
+    training_size = 10 #TODO
+    image_count = 0
+
+    """ Using directory """
+    # Define the directory containing the training images
+    img_dir = '/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/train_images/hands/'
+    # Define the list of images to use for training
+    img_list = []
+
+    # Loop over all files in the directory and append to the list if it is an image file
+    for filename in os.listdir(img_dir):
+        if filename.endswith('.jpg') or filename.endswith('.png'):
+            img_list.append(os.path.join(img_dir, filename))
+
+    # Loop over all images and calculate the histogram
+    for img_path in img_list:
+        if os.path.exists(img_path):
+
+            # Convert BGR
+            image = cv2.imread(img_path)
+
+            """ 1.2 START - Very slow use only 10 training images max """
+            Blue = []
+            Green = []
+            x, y = np.shape(image)[0]-1, np.shape(image)[1]-1
+            for i in range(x+1):
+                for j in range(y+1):
+                    # Ignore Black and White
+                    if (image[i][j][1]>10 and image[i][j][1]<250) or (image[i][j][0]<250 and image[i][j][0]>10):
+                        Blue.append(image[i][j][0])
+                        Green.append(image[i][j][1])
+
+            # Create a 2D histogram (ONE IMAGE)
+            hist, _, _ = np.histogram2d(Blue, Green, bins=[np.arange(0, 257), np.arange(0, 257)])
+            """ 1.2 END """
+
+            if Flag_first_img == True:
+                # Total train data histogram
+                train_hist = hist
+                Flag_first_img = False
+            else:
+                train_hist += hist
+
+            # Only train on 'training_size' amount of images
+            image_count += 1
+            if image_count >= training_size:
+                break
+
+
+    # Normalize trained dataset model
+    norm_trained_model = train_hist / np.max(train_hist)
+
+    # Save model
+    np.save("trained_hist_model_Blue_Green.npy", norm_trained_model)
+
+    # Plot the 2D histogram
+    plt.imshow(norm_trained_model)
+    plt.colorbar()
+    plt.xlabel('Green')
+    plt.ylabel('Blue')
+    plt.show()
+
+    return norm_trained_model
+
+"""
+Detect human skin with a trained model
+
+args:
+    - human_skin_image_hsv: (cv2 - BGR image) BGR image of the desired picture used for detection
+    - rgb_image: (cv2.imread(cv2.IMREAD_COLOR)) rgb image of the desired picture used for detection
+    - trained_hist_model: (np.array()) Trained 2D histogram model in Blue and Green color space
+return:
+    - rgb_image: (cv2.imread(cv2.IMREAD_COLOR)) rgb image with only the skin color left
+"""
+def detect_human_skin_BGR(human_skin_image, rgb_image, trained_hist_model):
+
+    # Loop through image
+    for i in range(human_skin_image.shape[0]):
+        for j in range(human_skin_image.shape[1]):
+            # Get pixel value at (i, j)
+            blue, green = human_skin_image[i, j, 0], human_skin_image[i, j, 1]
+            pixel_conf = trained_hist_model[blue][green]
+            if pixel_conf > 0.1:
+                continue
+            else: # Make pixels black
+                rgb_image[i, j] = [0, 0, 0]
+
+    return rgb_image
+
 
 
 if __name__ == '__main__':
