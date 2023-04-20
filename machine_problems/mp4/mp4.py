@@ -7,59 +7,31 @@ import os
 
 def main():
 
-    # Load in images as RGB
+    # Load in images as BGR
     gun1_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/test_images/gun1.bmp', cv2.IMREAD_COLOR)
     joy1_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/test_images/joy1.bmp', cv2.IMREAD_COLOR)
     pointer1_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/test_images/pointer1.bmp', cv2.IMREAD_COLOR)
 
-    # 3D Hue and Saturation histogram
-    # Open image using PIL
-    img_pil = Image.open('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/train_images/hands/Hand_0000002.jpg')
-    img_pil2 = Image.open('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/train_images/hands/Hand_0000092.jpg')
+    # Convert BGR image to HSV color space
+    gun1_hsv_img = cv2.cvtColor(gun1_img, cv2.COLOR_BGR2HSV)
+    joy1_hsv_img = cv2.cvtColor(joy1_img, cv2.COLOR_BGR2HSV)
+    pointer1_hsv_img = cv2.cvtColor(pointer1_img, cv2.COLOR_BGR2HSV)
 
     # Train histogram model
     trained_hist_model = train_histogram()
     # train_image_histogram(pointer1_img) # TODO
 
-    # Convert RGB image to HSV color space
-    gun1_hsv_img = cv2.cvtColor(gun1_img, cv2.COLOR_RGB2HSV)
-    joy1_hsv_img = cv2.cvtColor(joy1_img, cv2.COLOR_RGB2HSV)
-    pointer1_hsv_img = cv2.cvtColor(pointer1_img, cv2.COLOR_RGB2HSV)
-
-    cv2.imshow('Test Images1', gun1_img)
-    joy1_human_skin_img = detect_human_skin(gun1_hsv_img, gun1_img, trained_hist_model)
-
-
     # Detect human skin color
-    # Convert the jpg image to png format
-    # png_image = img_pil.convert('RGB')
+    gun1_human_skin_img = detect_human_skin(gun1_hsv_img, gun1_img, trained_hist_model)
+    joy1_human_skin_img = detect_human_skin(joy1_hsv_img, joy1_img, trained_hist_model)
+    pointer1_human_skin_img = detect_human_skin(pointer1_hsv_img, pointer1_img, trained_hist_model)
 
-    # Convert PIL image to NumPy array
-    # img_np = np.array(png_image)
-
-    # Convert RGB to BGR (OpenCV uses BGR color format)
-    # img_np = img_np[:, :, ::-1].copy()
-    # cv2.imshow('rgb image', img_np)
-
-    # print(f"\n img_np --------------- {img_np[0][0]}")
-
-    # Convert BGR image to HSV
-    # hsv_img = cv2.cvtColor(img_np, cv2.COLOR_BGR2HSV)
-    img_np = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/train_images/hands/Hand_0000002.jpg')
-    """ WORKING START """
-    # hsv_img = cv2.cvtColor(img_np, cv2.COLOR_RGB2HSV) # TODO
-    hsv_img = cv2.cvtColor(img_np, cv2.COLOR_BGR2HSV) # TODO
-    cv2.imshow('hsv image', hsv_img)
-    joy1_human_skin_img = detect_human_skin(hsv_img, img_np, trained_hist_model) # TODO
-    """ WORKING END """
-
-    # # Display images grid
-    # test_images = cv2.hconcat([np.uint8(gun1_img), np.uint8(joy1_img), np.uint8(pointer1_img)])
+    # Display images grid
+    test_images = cv2.hconcat([np.uint8(gun1_img), np.uint8(joy1_img), np.uint8(pointer1_img)])
+    result_images = cv2.hconcat([np.uint8(gun1_human_skin_img), np.uint8(joy1_human_skin_img), np.uint8(pointer1_human_skin_img)])
+    final_images = cv2.vconcat([test_images, result_images])
     # Display
-    # cv2.imshow('Test Images', test_images)
-
-    cv2.imshow('Test Images', joy1_human_skin_img)
-    # cv2.imshow('Train Images', train1_img)
+    cv2.imshow('Human skin color detection', final_images)
     # Wait for a key press to close the window
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -314,17 +286,6 @@ args:
 # def train_image_histogram(image):
 def train_histogram():
 
-    # Set the range for Hue and Saturation
-    # h_range = [0, 180]
-    s_range = [30, 256] # Set 5 as minimum to ignore the white background in Test images (White saturation = 0)
-    h_range = [0, 256]
-    # s_range = [30, 256] # Set 5 as minimum to ignore the white background in Test images (White saturation = 0)
-
-    # Set the number of bins for Hue and Saturation
-    # h_bins = 
-    h_bins = 256
-    s_bins = 256
-
     # First image flag
     Flag_first_img = True
 
@@ -346,28 +307,13 @@ def train_histogram():
     # Loop over all images and calculate the histogram
     for img_path in img_list:
         if os.path.exists(img_path):
-            # image = Image.open(img_path)
-            # Rest of the code to calculate histogram
 
             # image = Image.open(img_path)
             image = cv2.imread(img_path)
-
-            """ ONE IMAGE """
-            # Convert the jpg image to png format
-            # png_image = image.convert('RGBA') 
-            # png_image = image.convert('RGB') # TODO
-
-            # Convert PIL image to NumPy array
-            # img_np = np.array(png_image)# TODO
-
-            # Convert RGB to BGR (OpenCV uses BGR color format)
-            # img_np = img_np[:, :, ::-1].copy() # TODO
-
             # Convert BGR image to HSV
-            # hsv_img = cv2.cvtColor(img_np, cv2.COLOR_BGR2HSV) # TODO
             hsv_img = cv2.cvtColor(image, cv2.COLOR_BGR2HSV) # TODO
-            # hsv_img = cv2.cvtColor(img_np, cv2.COLOR_RGB2HSV)
 
+            """ 1.1 START """
             H = []
             S = []
             im_input = np.array(hsv_img)
@@ -380,43 +326,26 @@ def train_histogram():
                         H.append(im_input[i][j][0])
                         S.append(im_input[i][j][1])
 
-            # cv2.imshow('hsv_img', hsv_img)
-            # cv2.imshow('Train Images', train1_img)
-            # Wait for a key press to close the window
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
-
-            # cv2.imshow('Train Images', hsv_img)
-            # # Wait for a key press to close the window
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
-
-            # # Create a 3D histogram (ONE IMAGE)
+            # Create a 2D histogram (ONE IMAGE)
             hist, _, _ = np.histogram2d(H,
                                         S,
-                                        bins=[np.arange(0, 256), np.arange(0, 256)])
+                                        bins=[np.arange(0, 257), np.arange(0, 257)])
+            """ 1.1 END """
 
-            # # Create a 3D histogram (ONE IMAGE) # TODO
+            """ 1.2 START """
+            # # Set the range for Hue and Saturation
+            # s_range = [30, 256] # Set 5 as minimum to ignore the white background in Test images (White saturation = 0)
+            # h_range = [0, 256]
+            # # Set the number of bins for Hue and Saturation
+            # h_bins = 256
+            # s_bins = 256
+
+            # # Create a 2D histogram
             # hist, _, _ = np.histogram2d(hsv_img[:, :, 0].ravel(),
             #                             hsv_img[:, :, 1].ravel(),
             #                             bins=[h_bins, s_bins],
             #                             range=[h_range, s_range])
-            """ ONE IMAGE """
-
-            # Plot the 3D histogram
-            # fig = plt.figure()
-            # ax = fig.add_subplot(111, projection='3d')
-            # X, Y = np.meshgrid(np.arange(h_bins), np.arange(s_bins))
-            # ax.plot_surface(X, Y, hist.T, cmap='jet')
-            # ax.set_xlabel('Hue')
-            # ax.set_ylabel('Saturation')
-            # ax.set_zlabel('Count')
-            # plt.show()
-
-
-
-
-            # print(f"\n hist shape = {hist.shape}")
+            """ 1.2 END """
 
             if Flag_first_img == True:
                 # Total train data histogram
@@ -425,126 +354,16 @@ def train_histogram():
             else:
                 train_hist += hist
 
-            # print(f"\n train_hist shape = {train_hist.shape}")
-
-            # print(f"\n hist3 index [129][136] = {hist3[129][136]}")
-
-            # # Plot the 3D histogram
-            # fig = plt.figure()
-            # ax = fig.add_subplot(111, projection='3d')
-            # X, Y = np.meshgrid(np.arange(h_bins), np.arange(s_bins))
-            # ax.plot_surface(X, Y, train_hist.T, cmap='jet')
-            # ax.set_xlabel('Hue')
-            # ax.set_ylabel('Saturation')
-            # ax.set_zlabel('Count')
-            # plt.show()
-
             # Only train on 'training_size' amount of images
             image_count += 1
             if image_count >= training_size:
                 break
 
-        else:
-            print(f"File {img_path} does not exist. Skipping...")
 
+    # Normalize trained dataset model
+    norm_trained_model = train_hist / np.max(train_hist)
 
-
-
-
-
-
-    """ Loading with a for loop """
-    # for i in range(2,1000):
-    #     # Image does not exist flag
-    #     Flag_no_image = False
-
-    #     if i < 10:
-    #         try:
-    #             img_path = f"/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/train_images/hands/Hand_000000{i}.jpg"
-    #         except FileNotFoundError:
-    #             Flag_no_image = True
-    #     elif i < 100:
-    #         try:
-    #             img_path = f"/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/train_images/hands/Hand_00000{i}.jpg"
-    #         except FileNotFoundError:
-    #             Flag_no_image = True
-    #     elif i < 1000:
-    #         try:
-    #             img_path = f"/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp4/train_images/hands/Hand_0000{i}.jpg"
-    #         except FileNotFoundError:
-    #             Flag_no_image = True
-
-    #     if Flag_no_image == False:
-    #         image = Image.open(img_path)
-
-    #         """ ONE IMAGE """
-    #         # Convert the jpg image to png format
-    #         png_image = image.convert('RGBA')
-
-    #         # Convert PIL image to NumPy array
-    #         img_np = np.array(png_image)
-
-    #         # Convert RGB to BGR (OpenCV uses BGR color format)
-    #         img_np = img_np[:, :, ::-1].copy()
-
-    #         # Convert BGR image to HSV
-    #         hsv_img = cv2.cvtColor(img_np, cv2.COLOR_BGR2HSV)
-
-    #         # cv2.imshow('Train Images', hsv_img)
-    #         # # Wait for a key press to close the window
-    #         # cv2.waitKey(0)
-    #         # cv2.destroyAllWindows()
-
-    #         # Create a 3D histogram (ONE IMAGE)
-    #         hist, _, _ = np.histogram2d(hsv_img[:, :, 0].ravel(),
-    #                                     hsv_img[:, :, 1].ravel(),
-    #                                     bins=[h_bins, s_bins],
-    #                                     range=[h_range, s_range])
-    #         """ ONE IMAGE """
-
-    #         # Plot the 3D histogram
-    #         # fig = plt.figure()
-    #         # ax = fig.add_subplot(111, projection='3d')
-    #         # X, Y = np.meshgrid(np.arange(h_bins), np.arange(s_bins))
-    #         # ax.plot_surface(X, Y, hist.T, cmap='jet')
-    #         # ax.set_xlabel('Hue')
-    #         # ax.set_ylabel('Saturation')
-    #         # ax.set_zlabel('Count')
-    #         # plt.show()
-
-
-
-
-    #         # print(f"\n hist shape = {hist.shape}")
-
-    #         if Flag_first_img == True:
-    #             # Total train data histogram
-    #             train_hist = hist
-    #             Flag_first_img = False
-    #         else:
-    #             train_hist += hist
-
-    #         # print(f"\n train_hist shape = {train_hist.shape}")
-
-    #         # print(f"\n hist3 index [129][136] = {hist3[129][136]}")
-
-    #         # # Plot the 3D histogram
-    #         # fig = plt.figure()
-    #         # ax = fig.add_subplot(111, projection='3d')
-    #         # X, Y = np.meshgrid(np.arange(h_bins), np.arange(s_bins))
-    #         # ax.plot_surface(X, Y, train_hist.T, cmap='jet')
-    #         # ax.set_xlabel('Hue')
-    #         # ax.set_ylabel('Saturation')
-    #         # ax.set_zlabel('Count')
-    #         # plt.show()
-
-
-    # Normalize the array
-    norm_arr = train_hist / np.max(train_hist)
-
-    # print(f"\n norm_arr index [129][136] = {norm_arr[129][136]}")
-
-    # # Plot the 3D histogram
+    # Plot the 3D histogram
     # fig = plt.figure()
     # ax = fig.add_subplot(111, projection='3d')
     # X, Y = np.meshgrid(np.arange(h_bins), np.arange(s_bins))
@@ -554,11 +373,14 @@ def train_histogram():
     # ax.set_zlabel('Count')
     # plt.show()
 
-    plt.imshow(norm_arr)
+    # Plot the 2D histogram
+    plt.imshow(norm_trained_model)
     plt.colorbar()
     plt.show()
 
-    return norm_arr
+    print(f"\n trained model size = {norm_trained_model.shape}")
+
+    return norm_trained_model
 
 """
 Plot histogram of original image
@@ -574,15 +396,10 @@ def detect_human_skin(human_skin_image_hsv, rgb_image, trained_hist_model):
             # Get pixel value at (i, j)
             saturation, hue = human_skin_image_hsv[i, j, 0], human_skin_image_hsv[i, j, 1]
             pixel_conf = trained_hist_model[saturation][hue]
-            if pixel_conf > 0.05:
+            if pixel_conf > 0.1:
                 continue
-                # print(f"\n pixel SAT: {saturation}  HUE: {hue}")
-                # print(f"\n pixel_conf: {pixel_conf}")
             else: # Make pixels black
-                # print(f"\n rgb_image[i, j] before: {rgb_image[i, j]}")
                 rgb_image[i, j] = [0, 0, 0]
-                # continue
-                # print(f"\n rgb_image[i, j] after: {rgb_image[i, j]}")
 
     return rgb_image
 
