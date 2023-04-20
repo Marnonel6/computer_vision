@@ -1,6 +1,3 @@
-# Ignore dataset
-machine_problems/mp4/train_images/*
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
