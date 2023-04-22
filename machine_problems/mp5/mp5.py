@@ -18,7 +18,7 @@ def main():
     result_images = cv2.hconcat([np.uint8(gun1_img), np.uint8(joy1_img), np.uint8(pointer1_img)])
     # Final images
     final_images = cv2.vconcat([test_images, result_images])
-    final_images2 = cv2.hconcat([np.uint8(lena_img), np.uint8(lena_img)])
+    final_images2 = cv2.hconcat([np.uint8(lena_img), np.uint8(GaussSmoothing(lena_img))])
     final_images3 = cv2.hconcat([np.uint8(test1_img), np.uint8(test1_img)])
     # Display
     cv2.imshow('Canny edge detection', final_images)
@@ -29,15 +29,34 @@ def main():
     cv2.destroyAllWindows()
 
 """
-Detect human skin with a trained model
+Gaussian smoothing
 
 args:
-    - human_skin_image_hsv: (cv2 - BGR image) BGR image of the desired picture used for detection
-    - rgb_image: (cv2.imread(cv2.IMREAD_COLOR)) rgb image of the desired picture used for detection
-    - trained_hist_model: (np.array()) Trained 2D histogram model in Blue and Green color space
+    - image: (cv2 - BGR image) image to apply gaussian smoothing to
 return:
-    - rgb_image: (cv2.imread(cv2.IMREAD_COLOR)) rgb image with only the skin color left
+    - gs_smoothed_image: (cv2 - BGR image) gaussian smoothed image
 """
+def GaussSmoothing(image, N=5, sigma=1):
+    # Define the Gaussian filter kernel
+    kernel = np.zeros((N, N), dtype=np.float32)
+    mid = N // 2
+    for i in range(-mid, mid+1):
+        for j in range(-mid, mid+1):
+            kernel[i+mid][j+mid] = np.exp(-(i*i + j*j) / (2 * sigma*sigma))
+    kernel /= kernel.sum()
+
+    # Convolve the kernel with the input image
+    smoothed = cv2.filter2D(image, -1, kernel)
+
+    """ Using OpenCV """
+    # Convert to grayscale
+    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # # Apply gaussian smoothing with OpenCV
+    # gs_smoothed_image = cv2.GaussianBlur(gray, (5, 5), 0)
+    # smoothed = cv2.cvtColor(gs_smoothed_image, cv2.COLOR_GRAY2BGR)
+
+    return smoothed
+
 
 
 if __name__ == '__main__':
