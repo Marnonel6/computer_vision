@@ -15,7 +15,7 @@ def main():
     test_images = cv2.hconcat([np.uint8(gun1_img), np.uint8(joy1_img), np.uint8(pointer1_img)])
 
     # Display images grid
-    result_images = cv2.hconcat([np.uint8(gun1_img), np.uint8(joy1_img), np.uint8(pointer1_img)])
+    result_images = cv2.hconcat([np.uint8(GaussSmoothing(gun1_img)), np.uint8(joy1_img), np.uint8(pointer1_img)])
     # Final images
     final_images = cv2.vconcat([test_images, result_images])
     final_images2 = cv2.hconcat([np.uint8(lena_img), np.uint8(GaussSmoothing(lena_img))])
@@ -38,12 +38,17 @@ return:
 """
 def GaussSmoothing(image, N=5, sigma=1):
     # Define the Gaussian filter kernel
-    kernel = np.zeros((N, N), dtype=np.float32)
-    mid = N // 2
-    for i in range(-mid, mid+1):
-        for j in range(-mid, mid+1):
-            kernel[i+mid][j+mid] = np.exp(-(i*i + j*j) / (2 * sigma*sigma))
-    kernel /= kernel.sum()
+    # kernel = np.zeros((N, N), dtype=np.float32)
+    # mid = N // 2
+    # for i in range(-mid, mid+1):
+    #     for j in range(-mid, mid+1):
+    #         kernel[i+mid][j+mid] = np.exp(-(i*i + j*j) / (2 * sigma*sigma))
+    # kernel /= kernel.sum()
+
+    size = int(N) // 2
+    x, y = np.mgrid[-size:size+1, -size:size+1]
+    normal = 1 / (2.0 * np.pi * sigma**2)
+    kernel =  np.exp(-((x**2 + y**2) / (2.0*sigma**2))) * normal
 
     # Convolve the kernel with the input image
     smoothed = cv2.filter2D(image, -1, kernel)
