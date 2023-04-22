@@ -24,6 +24,13 @@ def main():
     # Smoothed images grid
     smoothed_images = cv2.hconcat([np.uint8(smoothed_gun1_img), np.uint8(smoothed_joy1_img), np.uint8(smoothed_pointer1_img)])
 
+    # Compute image gradient
+    mag_gun, dir_gun = ImageGradient(gun1_img)
+    mag_joy, dir_joy = ImageGradient(joy1_img)
+    mag_pointer, dir_pointer = ImageGradient(pointer1_img)
+    mag_lena, dir_lena = ImageGradient(lena_img)
+    mag_test, dir_test = ImageGradient(test1_img)
+
     # Final images
     final_images = cv2.vconcat([test_images, smoothed_images])
     final_images2 = cv2.hconcat([np.uint8(lena_img), np.uint8(smoothed_lena_img)])
@@ -33,13 +40,6 @@ def main():
     cv2.imshow('Canny edge detection2', final_images2)
     cv2.imshow('Canny edge detection3', final_images3)
 
-    # test numpy array
-    a = np.array([[38, 66, 65], [14, 35, 64], [12, 15, 42]])
-    magnitude, direction = ImageGradient(a)
-    print(magnitude)
-    print(direction)
-    # cv2.imshow('magnitude', magnitude)
-    # cv2.imshow('direction', direction)
     # Wait for a key press to close the window
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -91,16 +91,11 @@ return:
 """
 def ImageGradient(image):
     # Convert to grayscale
-    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray = image
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Sobel operators
     Gx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
     Gy = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
-
-    # print Gx and Gy
-    print(Gx)
-    print(Gy)
 
     # Apply Sobel convolution kernels
     Ix = convolve(gray, Gx)
