@@ -25,11 +25,18 @@ def main():
     smoothed_images = cv2.hconcat([np.uint8(smoothed_gun1_img), np.uint8(smoothed_joy1_img), np.uint8(smoothed_pointer1_img)])
 
     # Compute image gradient
-    mag_gun, dir_gun = ImageGradient(gun1_img)
-    mag_joy, dir_joy = ImageGradient(joy1_img)
-    mag_pointer, dir_pointer = ImageGradient(pointer1_img)
-    mag_lena, dir_lena = ImageGradient(lena_img)
-    mag_test, dir_test = ImageGradient(test1_img)
+    mag_gun, dir_gun = ImageGradient(smoothed_gun1_img)
+    mag_joy, dir_joy = ImageGradient(smoothed_joy1_img)
+    mag_pointer, dir_pointer = ImageGradient(smoothed_pointer1_img)
+    mag_lena, dir_lena = ImageGradient(smoothed_lena_img)
+    mag_test, dir_test = ImageGradient(smoothed_test1_img)
+
+    # Compute thresholds
+    T_high_gun, T_low_gun = compute_thresholds(mag_gun)
+    T_high_joy, T_low_joy = compute_thresholds(mag_joy)
+    T_high_pointer, T_low_pointer = compute_thresholds(mag_pointer)
+    T_high_lena, T_low_lena = compute_thresholds(mag_lena)
+    T_high_test, T_low_test = compute_thresholds(mag_test)
 
     # Final images
     final_images = cv2.vconcat([test_images, smoothed_images])
@@ -120,6 +127,42 @@ def ImageGradient(image):
 
     return magnitude, direction
 
+"""
+Determining high and low thresholds
+
+args:
+    - image: (cv2 - BGR image) image to apply thresholds to
+    - ratio: (float) ratio of high to low threshold
+    - percentageOfNonEdge: (float) percentage of non-edge pixels
+return:
+    - high_threshold: (float) high threshold value
+    - low_threshold: (float) low threshold value
+"""
+def compute_thresholds(image, ratio=0.5, percentageOfNonEdge=0.8):
+
+    # Histogram intensity data from image
+    hist, bins = np.histogram(image, bins=256, range=(0, 256))
+    # Calculate cumulative distribution
+    cumulative_hist = np.cumsum(hist)
+    # Normalize the cumulative values
+    cumulative_normalized = cumulative_hist / np.max(cumulative_hist)
+
+    # NOTE Debug
+    # # Plot cumulative distribution
+    # plt.figure()
+    # plt.plot(bins[:-1], cumulative_normalized)
+    # # Set the axis labels and title
+    # plt.xlabel('Input image pixel intensity')
+    # plt.ylabel('Output image pixel intensity normalized')
+    # plt.title('Cumulative histogram distribution')
+    # plt.show()
+
+    # Compute high and low thresholds
+    high_threshold = np.argwhere(cumulative_normalized >= percentageOfNonEdge)[0][0]
+    # print(high_threshold)
+    low_threshold = high_threshold * ratio
+
+    return high_threshold, low_threshold
 
 if __name__ == '__main__':
     main()
