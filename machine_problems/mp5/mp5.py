@@ -45,10 +45,10 @@ def main():
     mag_test, dir_test = ImageGradient(smoothed_test1_img)
 
 
-    cv2.imshow('mag_lena', mag_lena.astype(np.int8))
-    cv2.imshow('dir_lena', dir_lena.astype(np.int8))
-    cv2.imshow('dir_test', dir_test.astype(np.int8)) # TODO ADD BACK
-    cv2.imshow('mag_test', mag_test.astype(np.int8)) # TODO ADD BACK
+    cv2.imshow('mag_lena', np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_lena.astype(np.int8)), cv2.COLOR_GRAY2BGR)))
+    cv2.imshow('dir_lena', np.uint8(cv2.cvtColor(cv2.convertScaleAbs(dir_lena.astype(np.int8)), cv2.COLOR_GRAY2BGR)))
+    cv2.imshow('dir_test', np.uint8(cv2.cvtColor(cv2.convertScaleAbs(dir_test.astype(np.int8)), cv2.COLOR_GRAY2BGR))) # TODO ADD BACK
+    cv2.imshow('mag_test', np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_test.astype(np.int8)), cv2.COLOR_GRAY2BGR))) # TODO ADD BACK
     # cv2.imshow('Gradient3', dir_pointer)
 
     # Compute thresholds
@@ -115,7 +115,9 @@ def GaussSmoothing(image, N=5, sigma=1):
     kernel =  np.exp(-((x**2 + y**2) / (2.0*sigma**2))) * normal
 
     # Convolve the kernel with the input image
-    smoothed = cv2.filter2D(image, -1, kernel)
+    # smoothed = cv2.filter2D(image, -1, kernel)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    smoothed = convolve2d(kernel, image)
 
     """ Using OpenCV """
     # Convert to grayscale
@@ -137,7 +139,8 @@ return:
 """
 def ImageGradient(image):
     # Convert to grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray = image
 
     # Sobel operators
     Gx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
