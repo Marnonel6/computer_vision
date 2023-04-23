@@ -9,18 +9,18 @@ import copy
 def main():
 
     # Load in images as BGR
-    gun1_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp5/test_images/gun1.bmp', cv2.IMREAD_COLOR)
-    joy1_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp5/test_images/joy1.bmp', cv2.IMREAD_COLOR)
-    pointer1_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp5/test_images/pointer1.bmp', cv2.IMREAD_COLOR)
+    gun_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp5/test_images/gun1.bmp', cv2.IMREAD_COLOR)
+    joy_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp5/test_images/joy1.bmp', cv2.IMREAD_COLOR)
+    pointer_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp5/test_images/pointer1.bmp', cv2.IMREAD_COLOR)
     lena_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp5/test_images/lena.bmp', cv2.IMREAD_COLOR)
-    test1_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp5/test_images/test1.bmp', cv2.IMREAD_COLOR)
+    test_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp5/test_images/test1.bmp', cv2.IMREAD_COLOR)
 
     # Preform gaussian smoothing
-    smoothed_gun1_img = GaussSmoothing(gun1_img)
-    smoothed_joy1_img = GaussSmoothing(joy1_img)
-    smoothed_pointer1_img = GaussSmoothing(pointer1_img)
+    smoothed_gun_img = GaussSmoothing(gun_img)
+    smoothed_joy_img = GaussSmoothing(joy_img)
+    smoothed_pointer_img = GaussSmoothing(pointer_img)
     smoothed_lena_img = GaussSmoothing(lena_img)
-    smoothed_test1_img = GaussSmoothing(test1_img)
+    smoothed_test_img = GaussSmoothing(test_img)
 
     # Gaussian blur with opencv #NOTE OPENCV TEST
     # opencv_test_image = cv2.GaussianBlur(test1_img, (5,5), 1.4)
@@ -34,17 +34,17 @@ def main():
     # cv2.imshow('opencv_nms_test', opencv_nms_test)
 
     # Compute image gradient
-    mag_gun, dir_gun = ImageGradient(smoothed_gun1_img)
-    mag_joy, dir_joy = ImageGradient(smoothed_joy1_img)
-    mag_pointer, dir_pointer = ImageGradient(smoothed_pointer1_img)
+    mag_gun, dir_gun = ImageGradient(smoothed_gun_img)
+    mag_joy, dir_joy = ImageGradient(smoothed_joy_img)
+    mag_pointer, dir_pointer = ImageGradient(smoothed_pointer_img)
     mag_lena, dir_lena = ImageGradient(smoothed_lena_img)
-    mag_test, dir_test = ImageGradient(smoothed_test1_img)
+    mag_test, dir_test = ImageGradient(smoothed_test_img)
 
     # Compute thresholds
-    T_high_gun, T_low_gun = compute_thresholds(mag_gun)
-    T_high_joy, T_low_joy = compute_thresholds(mag_joy)
-    T_high_pointer, T_low_pointer = compute_thresholds(mag_pointer)
-    T_high_lena, T_low_lena = compute_thresholds(mag_lena, ratio=0.2, percentageOfNonEdge=0.7)
+    T_high_gun, T_low_gun = compute_thresholds(mag_gun, ratio=0.2, percentageOfNonEdge=0.75)
+    T_high_joy, T_low_joy = compute_thresholds(mag_joy, ratio=0.2, percentageOfNonEdge=0.75)
+    T_high_pointer, T_low_pointer = compute_thresholds(mag_pointer, ratio=0.2, percentageOfNonEdge=0.75)
+    T_high_lena, T_low_lena = compute_thresholds(mag_lena, ratio=0.2, percentageOfNonEdge=0.75)
     T_high_test, T_low_test = compute_thresholds(mag_test)
 
     # Apply non-maximum suppression
@@ -55,115 +55,158 @@ def main():
     nms_test = NonMaxSuppression(mag_test, dir_test)
 
     # Find strong and weak edges from non-maximum suppression
+    mag_high_gun, mag_low_gun, comb_high_low_mag_gun = find_edges(nms_gun, T_high_gun, T_low_gun)
+    mag_high_joy, mag_low_joy, comb_high_low_mag_joy = find_edges(nms_joy, T_high_joy, T_low_joy)
+    mag_high_pointer, mag_low_pointer, comb_high_low_mag_pointer = find_edges(nms_pointer, T_high_pointer, T_low_pointer)
     mag_high_lena, mag_low_lena, comb_high_low_mag_lena = find_edges(nms_lena, T_high_lena, T_low_lena)
     mag_high_test, mag_low_test, comb_high_low_mag_test = find_edges(nms_test, T_high_test, T_low_test)
 
     # Edge linking
+    edge_linking_gun = EdgeLinking(comb_high_low_mag_gun)
+    edge_linking_joy = EdgeLinking(comb_high_low_mag_joy)
+    edge_linking_pointer = EdgeLinking(comb_high_low_mag_pointer)
     edge_linking_lena = EdgeLinking(comb_high_low_mag_lena)
     edge_linking_test = EdgeLinking(comb_high_low_mag_test)
 
     # Display all figures
     display_all =True
     if display_all == True:
+
+        # Display images at each step in canny edge detection
         plt.figure(1)
-        plt.subplot(1, 6, 1)
+        plt.subplot(2, 4, 1)
+        plt.imshow(gun_img, cmap='gray')
+        plt.title('Original')
+        plt.subplot(2, 4, 2)
+        plt.imshow(smoothed_gun_img, cmap='gray')
+        plt.title('Gaussian Smoothing')
+        plt.subplot(2, 4, 3)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_gun), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Image Magnitude')
+        plt.subplot(2, 4, 4)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_gun), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Non-Maxima Suppression Gun')
+        plt.subplot(2, 4, 5)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_high_gun), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude strong edges')
+        plt.subplot(2, 4, 6)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_low_gun), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude weak edges')
+        plt.subplot(2, 4, 7)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(comb_high_low_mag_gun), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude strong edges (white), weak (gray)')
+        plt.subplot(2, 4, 8)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(edge_linking_gun), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Canny edge detection from scratch')
+        # plt.show()
+
+        plt.figure(2)
+        plt.subplot(2, 4, 1)
+        plt.imshow(joy_img, cmap='gray')
+        plt.title('Original')
+        plt.subplot(2, 4, 2)
+        plt.imshow(smoothed_joy_img, cmap='gray')
+        plt.title('Gaussian Smoothing')
+        plt.subplot(2, 4, 3)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_joy), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Image Magnitude')
+        plt.subplot(2, 4, 4)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_joy), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Non-Maxima Suppression Joy')
+        plt.subplot(2, 4, 5)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_high_joy), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude strong edges')
+        plt.subplot(2, 4, 6)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_low_joy), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude weak edges')
+        plt.subplot(2, 4, 7)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(comb_high_low_mag_joy), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude strong edges (white), weak (gray)')
+        plt.subplot(2, 4, 8)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(edge_linking_joy), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Canny edge detection from scratch')
+        # plt.show()
+
+        plt.figure(3)
+        plt.subplot(2, 4, 1)
+        plt.imshow(pointer_img, cmap='gray')
+        plt.title('Original')
+        plt.subplot(2, 4, 2)
+        plt.imshow(smoothed_pointer_img, cmap='gray')
+        plt.title('Gaussian Smoothing')
+        plt.subplot(2, 4, 3)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_pointer), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Image Magnitude')
+        plt.subplot(2, 4, 4)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_pointer), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Non-Maxima Suppression Pointer')
+        plt.subplot(2, 4, 5)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_high_pointer), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude strong edges')
+        plt.subplot(2, 4, 6)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_low_pointer), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude weak edges')
+        plt.subplot(2, 4, 7)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(comb_high_low_mag_pointer), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude strong edges (white), weak (gray)')
+        plt.subplot(2, 4, 8)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(edge_linking_pointer), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Canny edge detection from scratch')
+        # plt.show()
+
+        plt.figure(4)
+        plt.subplot(2, 4, 1)
         plt.imshow(lena_img, cmap='gray')
         plt.title('Original')
-        plt.subplot(1, 6, 2)
+        plt.subplot(2, 4, 2)
         plt.imshow(smoothed_lena_img, cmap='gray')
         plt.title('Gaussian Smoothing')
-        plt.subplot(1, 6, 3)
+        plt.subplot(2, 4, 3)
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_lena), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Image Magnitude')
-        plt.subplot(1, 6, 4)
+        plt.subplot(2, 4, 4)
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_lena), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Non-Maxima Suppression Lena')
-        # plt.subplot(1, 6, 5)
-        # plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_high_lena), cv2.COLOR_GRAY2BGR)), cmap='gray')
-        # plt.title('Magnitude strong edges')
-        # plt.subplot(1, 6, 6)
-        # plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_low_lena), cv2.COLOR_GRAY2BGR)), cmap='gray')
-        # plt.title('Magnitude weak edges')
-        plt.subplot(1, 6, 5)
+        plt.subplot(2, 4, 5)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_high_lena), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude strong edges')
+        plt.subplot(2, 4, 6)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_low_lena), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude weak edges')
+        plt.subplot(2, 4, 7)
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(comb_high_low_mag_lena), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Magnitude strong edges (white), weak (gray)')
-        plt.subplot(1, 6, 6)
+        plt.subplot(2, 4, 8)
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(edge_linking_lena), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Canny edge detection from scratch')
-        plt.show()
-
-        # plt.figure(2)
-        # plt.subplot(2, 4, 1)
-        # plt.imshow(gun1_img, cmap='gray')
-        # plt.title('Original')
-        # plt.subplot(2, 4, 2)
-        # plt.imshow(smoothed_gun1_img, cmap='gray')
-        # plt.title('Gaussian Smoothing')
-        # plt.subplot(2, 4, 3)
-        # plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_gun), cv2.COLOR_GRAY2BGR)), cmap='gray')
-        # plt.title('Image Magnitude')
-        # plt.subplot(2, 4, 4)
-        # plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_gun), cv2.COLOR_GRAY2BGR)), cmap='gray')
-        # plt.title('Non-Maxima Suppression Gun')
-        # plt.show()
-
-        # plt.figure(3)
-        # plt.subplot(2, 4, 1)
-        # plt.imshow(joy1_img, cmap='gray')
-        # plt.title('Original')
-        # plt.subplot(2, 4, 2)
-        # plt.imshow(smoothed_joy1_img, cmap='gray')
-        # plt.title('Gaussian Smoothing')
-        # plt.subplot(2, 4, 3)
-        # plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_joy), cv2.COLOR_GRAY2BGR)), cmap='gray')
-        # plt.title('Image Magnitude')
-        # plt.subplot(2, 4, 4)
-        # plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_joy), cv2.COLOR_GRAY2BGR)), cmap='gray')
-        # plt.title('Non-Maxima Suppression Joy')
-        # plt.show()
-
-        # plt.figure(4)
-        # plt.subplot(2, 4, 1)
-        # plt.imshow(pointer1_img, cmap='gray')
-        # plt.title('Original')
-        # plt.subplot(2, 4, 2)
-        # plt.imshow(smoothed_pointer1_img, cmap='gray')
-        # plt.title('Gaussian Smoothing')
-        # plt.subplot(2, 4, 3)
-        # plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_pointer), cv2.COLOR_GRAY2BGR)), cmap='gray')
-        # plt.title('Image Magnitude')
-        # plt.subplot(2, 4, 4)
-        # plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_pointer), cv2.COLOR_GRAY2BGR)), cmap='gray')
-        # plt.title('Non-Maxima Suppression Pointer')
         # plt.show()
 
         plt.figure(5)
-        plt.subplot(1, 6, 1)
-        plt.imshow(test1_img, cmap='gray')
+        plt.subplot(2, 4, 1)
+        plt.imshow(test_img, cmap='gray')
         plt.title('Original')
-        plt.subplot(1, 6, 2)
-        plt.imshow(smoothed_test1_img, cmap='gray')
+        plt.subplot(2, 4, 2)
+        plt.imshow(smoothed_test_img, cmap='gray')
         plt.title('Gaussian Smoothing')
-        plt.subplot(1, 6, 3)
+        plt.subplot(2, 4, 3)
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_test), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Image Magnitude')
-        plt.subplot(1, 6, 4)
+        plt.subplot(2, 4, 4)
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_test), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Non-Maxima Suppression Test')
-        # plt.subplot(2, 4, 3)
-        # plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_test), cv2.COLOR_GRAY2BGR)), cmap='gray')
-        # plt.title('Image Magnitude')
-        # plt.subplot(2, 4, 4)
-        # plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_test), cv2.COLOR_GRAY2BGR)), cmap='gray')
-        # plt.title('Non-Maxima Suppression Test')
-        plt.subplot(1, 6, 5)
+        plt.subplot(2, 4, 5)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_high_test), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude strong edges')
+        plt.subplot(2, 4, 6)
+        plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_low_test), cv2.COLOR_GRAY2BGR)), cmap='gray')
+        plt.title('Magnitude weak edges')
+        plt.subplot(2, 4, 7)
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(comb_high_low_mag_test), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Magnitude strong edges (white), weak (gray)')
-        plt.subplot(1, 6, 6)
+        plt.subplot(2, 4, 8)
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(edge_linking_test), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Canny edge detection from scratch')
         plt.show()
-
 
 """
 Gaussian smoothing
@@ -177,29 +220,14 @@ return:
 """
 def GaussSmoothing(image, N=5, sigma=1):
     # Define the Gaussian filter kernel
-    # kernel = np.zeros((N, N), dtype=np.float32)
-    # mid = N // 2
-    # for i in range(-mid, mid+1):
-    #     for j in range(-mid, mid+1):
-    #         kernel[i+mid][j+mid] = np.exp(-(i*i + j*j) / (2 * sigma*sigma))
-    # kernel /= kernel.sum()
-
     size = int(N) // 2
     x, y = np.mgrid[-size:size+1, -size:size+1]
     normal = 1 / (2.0 * np.pi * sigma**2)
     kernel =  np.exp(-((x**2 + y**2) / (2.0*sigma**2))) * normal
 
     # Convolve the kernel with the input image
-    # smoothed = cv2.filter2D(image, -1, kernel)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     smoothed = convolve2d(kernel, image)
-
-    """ Using OpenCV """
-    # Convert to grayscale
-    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # # Apply gaussian smoothing with OpenCV
-    # gs_smoothed_image = cv2.GaussianBlur(gray, (5, 5), 0)
-    # smoothed = cv2.cvtColor(gs_smoothed_image, cv2.COLOR_GRAY2BGR)
 
     return smoothed
 
@@ -207,47 +235,25 @@ def GaussSmoothing(image, N=5, sigma=1):
 Image gradient [Magnitude, Direction]
 
 args:
-    - image: (cv2 - BGR image) image to apply image gradient to
+    - image: (cv2 - gray image) image to apply image gradient to
 return:
-    - magnitude: (cv2 - BGR image) magnitude of the image gradient
-    - direction: (cv2 - BGR image) direction of the image gradient
+    - magnitude: (cv2 - gray image) magnitude of the image gradient
+    - direction: (cv2 - gray image) direction of the image gradient
 """
 def ImageGradient(image):
-    # Convert to grayscale
-    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray = image
-
     # Sobel operators
     Gx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
     Gy = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
 
     # Apply Sobel convolution kernels
-    # Ix = convolve(gray, Gx)
-    # Iy = convolve(gray, Gy)
-    Ix = convolve2d(Gx, gray)
-    Iy = convolve2d(Gy, gray)
+    Ix = convolve2d(Gx, image)
+    Iy = convolve2d(Gy, image)
 
     # Compute magnitude and direction
     magnitude = np.sqrt(Ix*Ix + Iy*Iy)
     magnitude = (magnitude/magnitude.max()) * 255
-    direction = np.arctan2(Iy, Ix) #*(180/np.pi) + 180# In degrees
+    direction = np.arctan2(Iy, Ix)
 
-    # magnitude, direction = cv2.cartToPolar(Ix, Iy)
-
-
-    # # Convert to grayscale # NOTE OpenCV implimentation
-    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # # Apply sobel operator
-    # sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=5)
-    # sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=5)
-    # # Compute magnitude and direction
-    # magnitude = np.sqrt(sobelx*sobelx + sobely*sobely)
-    # direction = np.arctan2(sobely, sobelx)
-    # # Convert to BGR
-    # magnitude = cv2.cvtColor(np.uint8(magnitude), cv2.COLOR_GRAY2BGR)
-    # direction = cv2.cvtColor(np.uint8(direction), cv2.COLOR_GRAY2BGR)
-
-    # return magnitude.astype(np.int8), direction.astype(np.int8) #TODO ADD BACK
     return magnitude, direction
 
 """
@@ -397,7 +403,6 @@ def EdgeLinking(image):
                     edges[i,j] = 0 # Delete weak edge
 
     return edges
-
 
 if __name__ == '__main__':
     main()
