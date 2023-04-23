@@ -40,6 +40,11 @@ def main():
     mag_lena, dir_lena = ImageGradient(smoothed_lena_img)
     mag_test, dir_test = ImageGradient(smoothed_test_img)
 
+    print(f"\n\n\n shape mag - {mag_gun.shape} \n\n\n")
+    print(f"\n\n\n shape mag - {mag_gun.shape} \n\n\n")
+    print(f"\n\n\n shape mag - {mag_gun.shape} \n\n\n")
+    print(f"\n\n\n shape mag - {mag_gun.shape} \n\n\n")
+
     # Compute thresholds
     T_high_gun, T_low_gun = compute_thresholds(mag_gun, ratio=0.2, percentageOfNonEdge=0.75)
     T_high_joy, T_low_joy = compute_thresholds(mag_joy, ratio=0.2, percentageOfNonEdge=0.75)
@@ -75,7 +80,7 @@ def main():
         # Display images at each step in canny edge detection
         plt.figure(1)
         plt.subplot(2, 4, 1)
-        plt.imshow(gun_img, cmap='gray')
+        plt.imshow(cv2.cvtColor(gun_img, cv2.COLOR_BGR2RGB), cmap='gray')
         plt.title('Original')
         plt.subplot(2, 4, 2)
         plt.imshow(smoothed_gun_img, cmap='gray')
@@ -98,11 +103,11 @@ def main():
         plt.subplot(2, 4, 8)
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(edge_linking_gun), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Canny edge detection from scratch')
-        # plt.show()
+        plt.show()
 
         plt.figure(2)
         plt.subplot(2, 4, 1)
-        plt.imshow(joy_img, cmap='gray')
+        plt.imshow(cv2.cvtColor(joy_img, cv2.COLOR_BGR2RGB), cmap='gray')
         plt.title('Original')
         plt.subplot(2, 4, 2)
         plt.imshow(smoothed_joy_img, cmap='gray')
@@ -125,11 +130,11 @@ def main():
         plt.subplot(2, 4, 8)
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(edge_linking_joy), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Canny edge detection from scratch')
-        # plt.show()
+        plt.show()
 
         plt.figure(3)
         plt.subplot(2, 4, 1)
-        plt.imshow(pointer_img, cmap='gray')
+        plt.imshow(cv2.cvtColor(pointer_img, cv2.COLOR_BGR2RGB), cmap='gray')
         plt.title('Original')
         plt.subplot(2, 4, 2)
         plt.imshow(smoothed_pointer_img, cmap='gray')
@@ -152,11 +157,11 @@ def main():
         plt.subplot(2, 4, 8)
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(edge_linking_pointer), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Canny edge detection from scratch')
-        # plt.show()
+        plt.show()
 
         plt.figure(4)
         plt.subplot(2, 4, 1)
-        plt.imshow(lena_img, cmap='gray')
+        plt.imshow(cv2.cvtColor(lena_img, cv2.COLOR_BGR2RGB), cmap='gray')
         plt.title('Original')
         plt.subplot(2, 4, 2)
         plt.imshow(smoothed_lena_img, cmap='gray')
@@ -179,11 +184,11 @@ def main():
         plt.subplot(2, 4, 8)
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(edge_linking_lena), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Canny edge detection from scratch')
-        # plt.show()
+        plt.show()
 
         plt.figure(5)
         plt.subplot(2, 4, 1)
-        plt.imshow(test_img, cmap='gray')
+        plt.imshow(cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB), cmap='gray')
         plt.title('Original')
         plt.subplot(2, 4, 2)
         plt.imshow(smoothed_test_img, cmap='gray')
@@ -207,6 +212,10 @@ def main():
         plt.imshow(np.uint8(cv2.cvtColor(cv2.convertScaleAbs(edge_linking_test), cv2.COLOR_GRAY2BGR)), cmap='gray')
         plt.title('Canny edge detection from scratch')
         plt.show()
+
+
+
+
 
 """
 Gaussian smoothing
@@ -307,7 +316,7 @@ return:
 def NonMaxSuppression(mag, angle):
     # Convert to grayscale
     # mag = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    row, col = mag.shape
+    col, row = mag.shape
     # Z = np.zeros((row, col), dtype=np.int8)
     # Suppressed image
     suppressed = np.zeros(mag.shape)
@@ -317,7 +326,7 @@ def NonMaxSuppression(mag, angle):
     # Loop through the image and find local maxima
     for i in range(1, col-1):
         for j in range(1, row-1):
-            try:
+            # try:
                 # Initialize dx and dj as max value
                 dx = 255
                 dj = 255
@@ -341,8 +350,8 @@ def NonMaxSuppression(mag, angle):
                 else:
                     suppressed[i,j] = 0
 
-            except IndexError as e:
-                pass
+            # except IndexError as e:
+            #     pass
 
     return suppressed
 
