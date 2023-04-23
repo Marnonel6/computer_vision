@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from scipy.ndimage import convolve
+from scipy.signal import convolve2d
 
 def main():
 
@@ -44,9 +45,10 @@ def main():
     mag_test, dir_test = ImageGradient(smoothed_test1_img)
 
 
-    # cv2.imshow('Gradient1', dir_lena)
-    # cv2.imshow('dir_test', dir_test) # TODO ADD BACK
-    # cv2.imshow('mag_test', mag_test) # TODO ADD BACK
+    cv2.imshow('mag_lena', mag_lena.astype(np.int8))
+    cv2.imshow('dir_lena', dir_lena.astype(np.int8))
+    cv2.imshow('dir_test', dir_test.astype(np.int8)) # TODO ADD BACK
+    cv2.imshow('mag_test', mag_test.astype(np.int8)) # TODO ADD BACK
     # cv2.imshow('Gradient3', dir_pointer)
 
     # Compute thresholds
@@ -63,8 +65,8 @@ def main():
     nms_lena = NonMaxSuppression(mag_lena, dir_lena)
     nms_test = NonMaxSuppression(mag_test, dir_test)
 
-    cv2.imshow('NonMaxSuppression lena', NonMaxSuppression(mag_lena, dir_lena))
-    cv2.imshow('NonMaxSuppression test', NonMaxSuppression(mag_test, dir_test))
+    cv2.imshow('NonMaxSuppression lena', np.uint8(cv2.cvtColor(cv2.convertScaleAbs(NonMaxSuppression(mag_lena, dir_lena)), cv2.COLOR_GRAY2BGR)))
+    cv2.imshow('NonMaxSuppression test', np.uint8(cv2.cvtColor(cv2.convertScaleAbs(NonMaxSuppression(mag_test, dir_test)), cv2.COLOR_GRAY2BGR)))
 
     # Display non-maxima suppresion
     # cv2.imshow('Non-maxima suppression', cv2.hconcat([np.uint8(nms_gun), np.uint8(nms_joy), np.uint8(nms_pointer)]))
@@ -73,16 +75,16 @@ def main():
 
     # Final images
     # final_images = cv2.vconcat([test_images, smoothed_images])
-    final_images2 = cv2.hconcat([np.uint8(lena_img), np.uint8(smoothed_lena_img),
-                                 np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_lena), cv2.COLOR_GRAY2BGR))])
-    final_images3 = cv2.hconcat([np.uint8(test1_img), np.uint8(smoothed_test1_img),
-                                #  np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_test), cv2.COLOR_GRAY2BGR)),
-                                #  np.uint8(cv2.cvtColor(cv2.convertScaleAbs(dir_test*100), cv2.COLOR_GRAY2BGR)),
-                                 np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_test), cv2.COLOR_GRAY2BGR))]) # HACK * 100 to see directions
+    # final_images2 = cv2.hconcat([np.uint8(lena_img), np.uint8(smoothed_lena_img),
+    #                              np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_lena), cv2.COLOR_GRAY2BGR))])
+    # final_images3 = cv2.hconcat([np.uint8(test1_img), np.uint8(smoothed_test1_img),
+    #                             #  np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_test), cv2.COLOR_GRAY2BGR)),
+    #                             #  np.uint8(cv2.cvtColor(cv2.convertScaleAbs(dir_test*100), cv2.COLOR_GRAY2BGR)),
+    #                              np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_test), cv2.COLOR_GRAY2BGR))]) # HACK * 100 to see directions
     # # Display
     # cv2.imshow('Canny edge detection', final_images)
-    cv2.imshow('Canny edge detection2', final_images2)
-    cv2.imshow('Canny edge detection3', final_images3)
+    # cv2.imshow('Canny edge detection2', final_images2)
+    # cv2.imshow('Canny edge detection3', final_images3)
 
     # Wait for a key press to close the window
     cv2.waitKey(0)
@@ -142,8 +144,10 @@ def ImageGradient(image):
     Gy = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
 
     # Apply Sobel convolution kernels
-    Ix = convolve(gray, Gx)
-    Iy = convolve(gray, Gy)
+    # Ix = convolve(gray, Gx)
+    # Iy = convolve(gray, Gy)
+    Ix = convolve2d(Gx, gray)
+    Iy = convolve2d(Gy, gray)
 
     # Compute magnitude and direction
     magnitude = np.sqrt(Ix*Ix + Iy*Iy)
