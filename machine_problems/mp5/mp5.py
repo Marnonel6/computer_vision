@@ -22,28 +22,12 @@ def main():
     smoothed_lena_img = GaussSmoothing(lena_img)
     smoothed_test_img = GaussSmoothing(test_img)
 
-    # Gaussian blur with opencv #NOTE OPENCV TEST
-    # opencv_test_image = cv2.GaussianBlur(test1_img, (5,5), 1.4)
-    # cv2.imshow('opencv_test_image', opencv_test_image)
-    # # Compute gradient and magnitude with openvc
-    # opencv_mag_test, opencv_dir_test = cv2.cartToPolar(cv2.Sobel(smoothed_test1_img, cv2.CV_32F, 1, 0, ksize=3), cv2.Sobel(smoothed_test1_img, cv2.CV_32F, 0, 1, ksize=3))
-    # cv2.imshow('opencv_mag_test', opencv_mag_test)
-    # cv2.imshow('opencv_dir_test', opencv_dir_test)
-    # Compute nonmaxima suppression with opencv
-    # opencv_nms_test = cv2.Canny(pointer1_img, 25, 150)
-    # cv2.imshow('opencv_nms_test', opencv_nms_test)
-
     # Compute image gradient
     mag_gun, dir_gun = ImageGradient(smoothed_gun_img)
     mag_joy, dir_joy = ImageGradient(smoothed_joy_img)
     mag_pointer, dir_pointer = ImageGradient(smoothed_pointer_img)
     mag_lena, dir_lena = ImageGradient(smoothed_lena_img)
     mag_test, dir_test = ImageGradient(smoothed_test_img)
-
-    print(f"\n\n\n shape mag - {mag_gun.shape} \n\n\n")
-    print(f"\n\n\n shape mag - {mag_gun.shape} \n\n\n")
-    print(f"\n\n\n shape mag - {mag_gun.shape} \n\n\n")
-    print(f"\n\n\n shape mag - {mag_gun.shape} \n\n\n")
 
     # Compute thresholds
     T_high_gun, T_low_gun = compute_thresholds(mag_gun, ratio=0.2, percentageOfNonEdge=0.75)
@@ -75,7 +59,7 @@ def main():
 
     # Display all figures
     display_all =True
-    if display_all == True:
+    if display_all:
 
         # Display images at each step in canny edge detection
         plt.figure(1)
@@ -213,9 +197,38 @@ def main():
         plt.title('Canny edge detection from scratch')
         plt.show()
 
+    """ Test other edge detectors  """
+    other_edge_detectors = True
+    if other_edge_detectors:
+        # Sobel filter
+        sobelxy = cv2.Sobel(smoothed_lena_img, ddepth=cv2.CV_64F, dx=1, dy=1, ksize=5) # Combined X and Y Sobel Edge Detection
 
+        # Canny filter
+        canny = cv2.Canny(lena_img, 100, 200)
 
+        # Roberts filter
+        roberts_cross_v = np.array([[0, 0, 0], [0, 1, 0], [0, 0, -1]])
+        roberts_cross_h = np.array([[0, 0, 0], [0, 0, 1], [0, -1, 0]])
+        roberts_v = cv2.filter2D(lena_img, -1, roberts_cross_v)
+        roberts_h = cv2.filter2D(lena_img, -1, roberts_cross_h)
+        roberts = cv2.addWeighted(roberts_v, 0.5, roberts_h, 0.5, 0)
 
+        # Zero-cross filter
+        laplacian = cv2.Laplacian(smoothed_lena_img, cv2.CV_64F)
+        thresh = 5
+        zero_cross = np.zeros(laplacian.shape, dtype=bool)
+        zero_cross[laplacian > thresh] = True
+        zero_cross = zero_cross.astype(np.uint8) * 255
+
+        # display results
+        cv2.imshow("Original", lena_img)
+        cv2.imshow("Sobel", sobelxy)
+        cv2.imshow("Canny", canny)
+        cv2.imshow("Roberts", roberts)
+        cv2.imshow("Zero-Cross", zero_cross)
+
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
 """
 Gaussian smoothing
@@ -306,53 +319,45 @@ def compute_thresholds(image, ratio=0.5, percentageOfNonEdge=0.8):
 Non-maximum suppression
 
 args:
-    - image: (cv2 - BGR image) image to apply non-maximum suppression to
     - direction: (numpy array) direction of the image gradient
     - magnitude: (numpy array) magnitude of the image gradient
 return:
     - suppressed: (cv2 - BGR image) non-maximum suppressed image
 """
-# NOTE img -> mag
-def NonMaxSuppression(mag, angle):
+def NonMaxSuppression(magnitude, direction):
     # Convert to grayscale
-    # mag = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    col, row = mag.shape
-    # Z = np.zeros((row, col), dtype=np.int8)
+    col, row = magnitude.shape
     # Suppressed image
-    suppressed = np.zeros(mag.shape)
-    angle = angle * 180 / np.pi
-    angle[angle < 0] += 180
+    suppressed = np.zeros(magnitude.shape)
+    direction = direction * 180 / np.pi
+    direction[direction < 0] += 180
 
     # Loop through the image and find local maxima
     for i in range(1, col-1):
         for j in range(1, row-1):
-            # try:
-                # Initialize dx and dj as max value
-                dx = 255
-                dj = 255
-                
-               # Constrain to matrix angle = 0
-                if (0 <= angle[i,j] < 22.5) or (157.5 <= angle[i,j] <= 180):
-                    dx, dj = mag[i, j+1], mag[i, j-1]
-                # Constrain to matrix angle =  45
-                elif (22.5 <= angle[i,j] < 67.5):
-                    dx, dj = mag[i+1, j-1], mag[i-1, j+1]
-                # Constrain to matrix angle =  90
-                elif (67.5 <= angle[i,j] < 112.5):
-                    dx, dj = mag[i+1, j], mag[i-1, j]
-                # Constrain to matrix angle =  135
-                elif (112.5 <= angle[i,j] < 157.5):
-                    dx, dj = mag[i-1, j-1], mag[i+1, j+1]
+            # Initialize dx and dj as max value
+            dx = 255
+            dj = 255
+            
+            # Constrain to matrix direction = 0
+            if (0 <= direction[i,j] < 22.5) or (157.5 <= direction[i,j] <= 180):
+                dx, dj = magnitude[i, j+1], magnitude[i, j-1]
+            # Constrain to matrix direction =  45
+            elif (22.5 <= direction[i,j] < 67.5):
+                dx, dj = magnitude[i+1, j-1], magnitude[i-1, j+1]
+            # Constrain to matrix direction =  90
+            elif (67.5 <= direction[i,j] < 112.5):
+                dx, dj = magnitude[i+1, j], magnitude[i-1, j]
+            # Constrain to matrix direction =  135
+            elif (112.5 <= direction[i,j] < 157.5):
+                dx, dj = magnitude[i-1, j-1], magnitude[i+1, j+1]
 
-                # Only keep pixel value of two sides are less intense than the current pixel
-                if (mag[i,j] >= dx) and (mag[i,j] >= dj):
-                    suppressed[i,j] = mag[i,j]
-                else:
-                    suppressed[i,j] = 0
-
-            # except IndexError as e:
-            #     pass
-
+            # Only keep pixel value of two sides are less intense than the current pixel
+            if (magnitude[i,j] >= dx) and (magnitude[i,j] >= dj):
+                suppressed[i,j] = magnitude[i,j]
+            else:
+                suppressed[i,j] = 0
+        
     return suppressed
 
 """
