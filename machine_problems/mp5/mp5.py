@@ -16,35 +16,70 @@ def main():
     test_images = cv2.hconcat([np.uint8(gun1_img), np.uint8(joy1_img), np.uint8(pointer1_img)])
 
     # Preform gaussian smoothing
-    smoothed_gun1_img = GaussSmoothing(gun1_img)
-    smoothed_joy1_img = GaussSmoothing(joy1_img)
-    smoothed_pointer1_img = GaussSmoothing(pointer1_img)
-    smoothed_lena_img = GaussSmoothing(lena_img)
+    # smoothed_gun1_img = GaussSmoothing(gun1_img)
+    # smoothed_joy1_img = GaussSmoothing(joy1_img)
+    # smoothed_pointer1_img = GaussSmoothing(pointer1_img)
+    # smoothed_lena_img = GaussSmoothing(lena_img)
     smoothed_test1_img = GaussSmoothing(test1_img)
     # Smoothed images grid
-    smoothed_images = cv2.hconcat([np.uint8(smoothed_gun1_img), np.uint8(smoothed_joy1_img), np.uint8(smoothed_pointer1_img)])
+    # smoothed_images = cv2.hconcat([np.uint8(smoothed_gun1_img), np.uint8(smoothed_joy1_img), np.uint8(smoothed_pointer1_img)])
+
+    # Gaussian blur with opencv #NOTE OPENCV TEST
+    # opencv_test_image = cv2.GaussianBlur(test1_img, (5,5), 1.4)
+    # cv2.imshow('opencv_test_image', opencv_test_image)
+    # # Compute gradient and magnitude with openvc
+    # opencv_mag_test, opencv_dir_test = cv2.cartToPolar(cv2.Sobel(smoothed_test1_img, cv2.CV_32F, 1, 0, ksize=3), cv2.Sobel(smoothed_test1_img, cv2.CV_32F, 0, 1, ksize=3))
+    # cv2.imshow('opencv_mag_test', opencv_mag_test)
+    # cv2.imshow('opencv_dir_test', opencv_dir_test)
+    # Compute nonmaxima suppression with opencv
+    # opencv_nms_test = cv2.Canny(pointer1_img, 25, 150)
+    # cv2.imshow('opencv_nms_test', opencv_nms_test)
 
     # Compute image gradient
-    mag_gun, dir_gun = ImageGradient(smoothed_gun1_img)
-    mag_joy, dir_joy = ImageGradient(smoothed_joy1_img)
-    mag_pointer, dir_pointer = ImageGradient(smoothed_pointer1_img)
-    mag_lena, dir_lena = ImageGradient(smoothed_lena_img)
+    # mag_gun, dir_gun = ImageGradient(smoothed_gun1_img)
+    # mag_joy, dir_joy = ImageGradient(smoothed_joy1_img)
+    # mag_pointer, dir_pointer = ImageGradient(smoothed_pointer1_img)
+    # mag_lena, dir_lena = ImageGradient(smoothed_lena_img)
     mag_test, dir_test = ImageGradient(smoothed_test1_img)
 
+
+    # cv2.imshow('Gradient1', dir_lena)
+    cv2.imshow('dir_test', dir_test)
+    cv2.imshow('mag_test', mag_test)
+    # cv2.imshow('Gradient3', dir_pointer)
+
     # Compute thresholds
-    T_high_gun, T_low_gun = compute_thresholds(mag_gun)
-    T_high_joy, T_low_joy = compute_thresholds(mag_joy)
-    T_high_pointer, T_low_pointer = compute_thresholds(mag_pointer)
-    T_high_lena, T_low_lena = compute_thresholds(mag_lena)
+    # T_high_gun, T_low_gun = compute_thresholds(mag_gun)
+    # T_high_joy, T_low_joy = compute_thresholds(mag_joy)
+    # T_high_pointer, T_low_pointer = compute_thresholds(mag_pointer)
+    # T_high_lena, T_low_lena = compute_thresholds(mag_lena)
     T_high_test, T_low_test = compute_thresholds(mag_test)
 
+    # Apply non-maximum suppression
+    # nms_gun = NonMaxSuppression(mag_gun, dir_gun)
+    # nms_joy = NonMaxSuppression(mag_joy, dir_joy)
+    # nms_pointer = NonMaxSuppression(mag_pointer, dir_pointer)
+    # nms_lena = NonMaxSuppression(mag_lena, dir_lena)
+    nms_test = NonMaxSuppression(mag_test, dir_test)
+
+    # cv2.imshow('NonMaxSuppression lena', NonMaxSuppression(mag_lena, dir_lena)) # HACK x 15 to make it brighter
+    cv2.imshow('NonMaxSuppression test', NonMaxSuppression(mag_test, dir_test)) # HACK x 15 to make it brighter
+
+    # Display non-maxima suppresion
+    # cv2.imshow('Non-maxima suppression', cv2.hconcat([np.uint8(nms_gun), np.uint8(nms_joy), np.uint8(nms_pointer)]))
+    # cv2.imshow('Non-maxima suppression2', np.uint8(nms_lena))
+    # cv2.imshow('Non-maxima suppression3', np.uint8(nms_test))
+
     # Final images
-    final_images = cv2.vconcat([test_images, smoothed_images])
-    final_images2 = cv2.hconcat([np.uint8(lena_img), np.uint8(smoothed_lena_img)])
-    final_images3 = cv2.hconcat([np.uint8(test1_img), np.uint8(smoothed_test1_img)])
-    # Display
-    cv2.imshow('Canny edge detection', final_images)
-    cv2.imshow('Canny edge detection2', final_images2)
+    # final_images = cv2.vconcat([test_images, smoothed_images])
+    # final_images2 = cv2.hconcat([np.uint8(lena_img), np.uint8(smoothed_lena_img)])
+    final_images3 = cv2.hconcat([np.uint8(test1_img), np.uint8(smoothed_test1_img),
+                                 np.uint8(cv2.cvtColor(cv2.convertScaleAbs(mag_test), cv2.COLOR_GRAY2BGR)),
+                                 np.uint8(cv2.cvtColor(cv2.convertScaleAbs(dir_test*100), cv2.COLOR_GRAY2BGR)),
+                                 np.uint8(cv2.cvtColor(cv2.convertScaleAbs(nms_test), cv2.COLOR_GRAY2BGR))]) # HACK * 100 to see directions
+    # # Display
+    # cv2.imshow('Canny edge detection', final_images)
+    # cv2.imshow('Canny edge detection2', final_images2)
     cv2.imshow('Canny edge detection3', final_images3)
 
     # Wait for a key press to close the window
@@ -110,7 +145,10 @@ def ImageGradient(image):
 
     # Compute magnitude and direction
     magnitude = np.sqrt(Ix*Ix + Iy*Iy)
-    direction = 180 + np.arctan2(Iy, Ix)*(180/np.pi) # In degrees
+    magnitude = (magnitude/magnitude.max()) * 255
+    direction = np.arctan2(Iy, Ix) #*(180/np.pi) + 180# In degrees
+
+    # magnitude, direction = cv2.cartToPolar(Ix, Iy)
 
 
     # # Convert to grayscale # NOTE OpenCV implimentation
@@ -125,7 +163,8 @@ def ImageGradient(image):
     # magnitude = cv2.cvtColor(np.uint8(magnitude), cv2.COLOR_GRAY2BGR)
     # direction = cv2.cvtColor(np.uint8(direction), cv2.COLOR_GRAY2BGR)
 
-    return magnitude, direction
+    return magnitude.astype(np.int8), direction.astype(np.int8)
+    # return magnitude, direction
 
 """
 Determining high and low thresholds
@@ -163,6 +202,59 @@ def compute_thresholds(image, ratio=0.5, percentageOfNonEdge=0.8):
     low_threshold = high_threshold * ratio
 
     return high_threshold, low_threshold
+
+"""
+Non-maximum suppression
+
+args:
+    - image: (cv2 - BGR image) image to apply non-maximum suppression to
+    - direction: (numpy array) direction of the image gradient
+    - magnitude: (numpy array) magnitude of the image gradient
+return:
+    - suppressed: (cv2 - BGR image) non-maximum suppressed image
+"""
+# NOTE img -> mag
+def NonMaxSuppression(mag, angle):
+    # Convert to grayscale
+    # mag = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    row, col = mag.shape
+    # Z = np.zeros((row, col), dtype=np.int8)
+    # Suppressed image
+    suppressed = np.zeros(mag.shape)
+    angle = angle * 180. / np.pi
+    angle[angle < 0] += 180
+
+    # Loop through the image and find local maxima
+    for i in range(1, col-1):
+        for j in range(1, row-1):
+            # try:
+                # Initialize dx and dj as max value
+                dx = 255
+                dj = 255
+                
+               # Constrain to matrix angle = 0
+                if (0 <= angle[i,j] < 22.5) or (157.5 <= angle[i,j] <= 180):
+                    dx, dj = mag[i, j+1], mag[i, j-1]
+                # Constrain to matrix angle =  45
+                elif (22.5 <= angle[i,j] < 67.5):
+                    dx, dj = mag[i+1, j-1], mag[i-1, j+1]
+                # Constrain to matrix angle =  90
+                elif (67.5 <= angle[i,j] < 112.5):
+                    dx, dj = mag[i+1, j], mag[i-1, j]
+                # Constrain to matrix angle =  135
+                elif (112.5 <= angle[i,j] < 157.5):
+                    dx, dj = mag[i-1, j-1], mag[i+1, j+1]
+
+                # Only keep pixel value of two sides are less intense than the current pixel
+                if (mag[i,j] >= dx) and (mag[i,j] >= dj):
+                    suppressed[i,j] = mag[i,j]
+                else:
+                    suppressed[i,j] = 0
+
+            # except IndexError as e:
+            #     pass
+
+    return suppressed
 
 if __name__ == '__main__':
     main()
