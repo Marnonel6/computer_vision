@@ -1,8 +1,6 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-from scipy.ndimage import convolve
 from scipy.signal import convolve2d
 import copy
 
@@ -30,9 +28,9 @@ def main():
     mag_test, dir_test = ImageGradient(smoothed_test_img)
 
     # Compute thresholds
-    T_high_gun, T_low_gun = compute_thresholds(mag_gun, ratio=0.2, percentageOfNonEdge=0.75)
-    T_high_joy, T_low_joy = compute_thresholds(mag_joy, ratio=0.2, percentageOfNonEdge=0.75)
-    T_high_pointer, T_low_pointer = compute_thresholds(mag_pointer, ratio=0.2, percentageOfNonEdge=0.75)
+    T_high_gun, T_low_gun = compute_thresholds(mag_gun, ratio=0.4, percentageOfNonEdge=0.85)
+    T_high_joy, T_low_joy = compute_thresholds(mag_joy, ratio=0.2, percentageOfNonEdge=0.70)
+    T_high_pointer, T_low_pointer = compute_thresholds(mag_pointer, ratio=0.4, percentageOfNonEdge=0.85)
     T_high_lena, T_low_lena = compute_thresholds(mag_lena, ratio=0.2, percentageOfNonEdge=0.75)
     T_high_test, T_low_test = compute_thresholds(mag_test)
 
@@ -201,7 +199,7 @@ def main():
     other_edge_detectors = True
     if other_edge_detectors:
         # Sobel filter
-        sobelxy = cv2.Sobel(smoothed_lena_img, ddepth=cv2.CV_64F, dx=1, dy=1, ksize=5) # Combined X and Y Sobel Edge Detection
+        sobelxy = cv2.Sobel(smoothed_lena_img, ddepth=cv2.CV_64F, dx=1, dy=1, ksize=5)
 
         # Canny filter
         canny = cv2.Canny(lena_img, 100, 200)
@@ -238,10 +236,10 @@ args:
     - N: (int) size of the gaussian kernel [NxN]
     - sigma: (float) standard deviation of the gaussian distribution
 return:
-    - smoothed: (cv2 - BGR image) gaussian smoothed image
+    - smoothed: (cv2 - gray image) gaussian smoothed image
 """
 def GaussSmoothing(image, N=5, sigma=1):
-    # Define the Gaussian filter kernel
+    # Gaussian filter kernel
     size = int(N) // 2
     x, y = np.mgrid[-size:size+1, -size:size+1]
     normal = 1 / (2.0 * np.pi * sigma**2)
@@ -297,17 +295,6 @@ def compute_thresholds(image, ratio=0.5, percentageOfNonEdge=0.8):
     cumulative_hist = np.cumsum(hist)
     # Normalize the cumulative values
     cumulative_normalized = cumulative_hist / np.max(cumulative_hist)
-
-    # NOTE Debug
-    # # Plot cumulative distribution
-    # plt.figure()
-    # plt.plot(bins[:-1], cumulative_normalized)
-    # # Set the axis labels and title
-    # plt.xlabel('Input image pixel intensity')
-    # plt.ylabel('Output image pixel intensity normalized')
-    # plt.title('Cumulative histogram distribution')
-    # plt.show()
-
     # Compute high and low thresholds
     high_threshold = np.argwhere(cumulative_normalized >= percentageOfNonEdge)[0][0]
     # print(high_threshold)
@@ -322,19 +309,19 @@ args:
     - direction: (numpy array) direction of the image gradient
     - magnitude: (numpy array) magnitude of the image gradient
 return:
-    - suppressed: (cv2 - BGR image) non-maximum suppressed image
+    - suppressed: (cv2 - gray image) non-maximum suppressed image
 """
 def NonMaxSuppression(magnitude, direction):
-    # Convert to grayscale
-    col, row = magnitude.shape
+
+    # col, row = magnitude.shape
     # Suppressed image
     suppressed = np.zeros(magnitude.shape)
     direction = direction * 180 / np.pi
     direction[direction < 0] += 180
 
     # Loop through the image and find local maxima
-    for i in range(1, col-1):
-        for j in range(1, row-1):
+    for i in range(1, magnitude.shape[0] - 1):
+        for j in range(1, magnitude.shape[1] - 1):
             # Initialize dx and dj as max value
             dx = 255
             dj = 255
@@ -357,7 +344,7 @@ def NonMaxSuppression(magnitude, direction):
                 suppressed[i,j] = magnitude[i,j]
             else:
                 suppressed[i,j] = 0
-        
+
     return suppressed
 
 """
@@ -370,6 +357,7 @@ args:
 return:
     - strong_edges: (cv2 - gray image) image with strong edges
     - weak_edges: (cv2 - gray image) image with weak edges
+    - combined_edges: (cv2 - gray image) image with strong edges (255) and weak edges (125)
 """
 def find_edges(image, T_high, T_low):
     # Initialize strong and weak edges
