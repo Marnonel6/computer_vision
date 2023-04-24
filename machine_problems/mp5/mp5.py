@@ -306,14 +306,13 @@ def compute_thresholds(magnitude, ratio=0.5, percentageOfNonEdge=0.8):
 Non-maximum suppression
 
 args:
-    - direction: (numpy array) direction of the image gradient
-    - magnitude: (numpy array) magnitude of the image gradient
+    - magnitude: (cv2 - gray image) magnitude of the image gradient
+    - direction: (cv2 - gray image) direction of the image gradient
 return:
     - suppressed: (cv2 - gray image) non-maximum suppressed image
 """
 def NonMaxSuppression(magnitude, direction):
 
-    # col, row = magnitude.shape
     # Suppressed image
     suppressed = np.zeros(magnitude.shape)
     direction = direction * 180 / np.pi
@@ -351,7 +350,7 @@ def NonMaxSuppression(magnitude, direction):
 Finds weak and strong edges with high and low threshold
 
 args:
-    - image: (cv2 - gray image) image to apply thresholds to
+    - suppressed: (cv2 - gray image) non-maximum suppressed image to apply thresholds to
     - T_high: (float) high threshold value
     - T_low: (float) low threshold value
 return:
@@ -359,21 +358,21 @@ return:
     - weak_edges: (cv2 - gray image) image with weak edges
     - combined_edges: (cv2 - gray image) image with strong edges (255) and weak edges (125)
 """
-def find_edges(image, T_high, T_low):
+def find_edges(suppressed, T_high, T_low):
     # Initialize strong and weak edges
-    strong_edges = np.zeros(image.shape)
-    weak_edges = np.zeros(image.shape)
-    combined_edges = np.zeros(image.shape)
+    strong_edges = np.zeros(suppressed.shape)
+    weak_edges = np.zeros(suppressed.shape)
+    combined_edges = np.zeros(suppressed.shape)
 
-    # Loop through image
-    for i in range(image.shape[0]):
-        for j in range(image.shape[1]):
+    # Loop through suppressed image
+    for i in range(suppressed.shape[0]):
+        for j in range(suppressed.shape[1]):
             # Weak edges
-            if image[i,j] >= T_low:
+            if suppressed[i,j] >= T_low:
                 weak_edges[i,j] = 125
                 combined_edges[i,j] = 125
             # Strong edges
-            if image[i,j] >= T_high:
+            if suppressed[i,j] >= T_high:
                 strong_edges[i,j] = 255
                 combined_edges[i,j] = 255
 
