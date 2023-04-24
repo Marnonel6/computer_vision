@@ -280,17 +280,17 @@ def ImageGradient(image):
 Determining high and low thresholds
 
 args:
-    - image: (cv2 - BGR image) image to apply thresholds to
+    - magnitude: (cv2 - gray image) magnitude image for determining the two thresholds
     - ratio: (float) ratio of high to low threshold
     - percentageOfNonEdge: (float) percentage of non-edge pixels
 return:
     - high_threshold: (float) high threshold value
     - low_threshold: (float) low threshold value
 """
-def compute_thresholds(image, ratio=0.5, percentageOfNonEdge=0.8):
+def compute_thresholds(magnitude, ratio=0.5, percentageOfNonEdge=0.8):
 
-    # Histogram intensity data from image
-    hist, bins = np.histogram(image, bins=256, range=(0, 256))
+    # Histogram intensity data from magnitude
+    hist, bins = np.histogram(magnitude, bins=256, range=(0, 256))
     # Calculate cumulative distribution
     cumulative_hist = np.cumsum(hist)
     # Normalize the cumulative values
