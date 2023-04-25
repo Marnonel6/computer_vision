@@ -1,59 +1,48 @@
-# Histogram-based Skin Color Detection
-A `Histogram-based skin color detection algorithm` was programmed to extract human skin color from an image.
+# Canny Edge Detector from scratch
+A Canny edge detector is a multi-stage algorithm that detects edges in images by applying a series of filters to reduce noise, calculate image gradients, suppress non-maximum edges, and using a high and low threshold with recursion to determine final edges.
 
-A 2D histogram was created by converting the BGR image to HSV. The 2D histogram is created by counting the frequency of hue and saturation pairs in
-a dataset with training images. The histogram was then normalized. When looking at the trained histogram model it was evident that white (Saturation = 0)
-was in the vast majority as all other hue and saturation pairs was suppressed after normalizing. This made sense as the training images where all of
-hands on a white background. A filter was then added when training the histogram to not include saturation value under 25 as to filter out white.
-The new trained 2D histogram had a cluster between Hue[0,25] and Saturation[40,140]. This was the skin color cluster.
+Below is a description of the 6 functions used, in order, to implement canny edge detection:
 
-When testing the trained histogram model on test images the images was converted to HSV and then each pixel was iterated through. The Hue and Saturation
-values where used to index the 2D histogram model and when the normalized value at the index was greater than 0.1 the pixel was classified to be skin
-color otherwise the pixel was set to black. This ensured that the output image will only contain pixels that is associated with skin color. 
+1) `Gaussian smoothing:` This function preforms Gaussian smoothing on a gray scale image with a given kernel size and standard deviation. This reduces the noise in the image.
 
-The 2D histogram model was trained on 10, 250 and 1000 images with no significant accuracy increase after 250 images. The model was saved and can now
-be loaded and used.
+2) `Image gradient:` This function takes in the smoothed gray scale image and calculates the images gradient and magnitude.  Sobel operators are used to compute the horizontal and vertical edges of the image (Ix, Iy). The magnitude of the image gradient is calculated by taking the square root of the sum of the squares of the horizontal and vertical edges and the direction of the image gradient is calculated using the arctan2 of the vertical and horizontal edges.
 
-The BGR color space was also used for training a 2D histogram skin color detection model, but the accuracy was low. The HSV color space was chosen as
-it had the highest accuracy.
+3) `Compute thresholds:` This function computes high and low thresholds based on the magnitude image of the image gradient. First a histogram is created from the magnitude image and then the cumulative histogram is generated and normalized. The first bin of the cumulative distribution that is greater than or equal to the percentage of non-edge pixels is determined to be the high threshold. The low threshold is calculated by multiplying the high threshold with the given ratio.
+
+4) `Non-maximum suppression:` This is used to thin out the edges obtained from applying gradient-based edge detection. It works by iterating through each pixel in the magnitude image and comparing the gradient direction of the pixel to its neighboring pixels. The output is obtained by only keeping pixels whose magnitude is greater than or equal to its two neighboring pixels in the direction of the gradient.
+
+5) `Find edges:` The algorithm loops through the suppressed image and assigns pixel values to each image based on the high and low threshold values. Pixels with values above the high threshold are considered strong edges, those between the high and low thresholds are considered weak edges, and those below the low threshold are not considered edges. The output images have different pixel values to differentiate between strong and weak edges.
+
+6) `Edge linking:` The input to the function is an image containing both strong (255) and weak (125) edges. The function loops through each pixel in the image and checks if the pixel is a weak edge. If it is, it checks if any of its eight neighboring pixels has a strong edge. If it does, the weak edge is made strong by setting its value to 255. If not, the weak edge is deleted by setting its value to 0. The function returns an image containing only strong edges.
 
 ### Results:
-Figure 1 displays the trained 2D histogram trained with a 1000 images in the HSV color space. The skin color cluster is evident between Hue[0,25] and
-Saturation[40,140].
+Figure 1 displays the output image of each function described above. (Figure 1: Top, Middle left) The Gaussian smoothing makes the image less sharp and thus reduces the edge noise. (Figure 1: Top, Middle right) The edges is then found by calculating the gradient of the image. The image magnitude displays the approximate edge locations. (Figure 1: Top, Right)  Next the Non-Maxima suppression makes the edges in the magnitude tinner and thus the edges more clear.  (Figure 1: Bottom left 3 images) The high and low threshold is then applied to the image and the edges are categorized in either strong or weak edges. (Figure 1: Bottom right) Lastly the weak edges are used to connect and extend the strong edges. This is the final result from the Canny edge detection algorithm.
 
-`Figure 1: HSV color space 2D histogram trained model on a 1000 images`
+`Figure 1: Image at each step in the canny edge detection algorithm.`
 
-![10_train_images_Skin_trained_model](https://user-images.githubusercontent.com/60977336/233508980-32e78337-c68d-4520-8941-9296bf00a3dd.png)
+![Screenshot from 2023-04-23 19-15-03](https://user-images.githubusercontent.com/60977336/234143612-e0e827c4-84a0-44df-9021-876925f9259e.png)
 
-Figure 2 displays the test images and the results of the skin color detection using the HSV space with a trained 2D histogram model. The skin color
-is identified with good accuracy. [Closing](https://github.com/Marnonel6/computer_vision/tree/main/machine_problems/mp2) can be preformed to fill up
-the holes. Also [size/noise filtering](https://github.com/Marnonel6/computer_vision/tree/main/machine_problems/mp1) can be used to remove the small
-noise in the output image.
+Different high and low thresholds where experimented with. Decreasing the high threshold increases the amount of edges that are considered strong edges and thus drastically increases the edges and noise in the image. Decreasing the low threshold increases the amount of weak edges that can connect strong edges to generate clean lines. Thus a good choice is a high threshold that does not capture noise, but still captures parts of the main features of an image and then a low threshold that captures all the desired features in an image with some noise.
 
-`Figure 2: (Top) - Input test images. (Bottom) - Results with HSV trained 2D histogram model`
+Figure 2 displays edge detectors that are in the OpenCV package. It is evident that Canny edge detection outperforms the other detection methods in accuracy and noise reduction. The canny edge detection that was implemented from scratch displayed in Figure 1 is comparable in accuracy to the builtin Canny edge detection algorithm in OpenCV.
 
-![Human skin color detection 1000 Train images](https://user-images.githubusercontent.com/60977336/233509075-19a800e7-f84b-4124-ac51-45e06a058327.png)
+`Figure 2: OpenCV's built in edge detection algorithms
 
-Figure 3 displays the trained 2D histogram trained with a 100 images in the BGR color space. Possible black and white pixels where filtered out by
-adding a only considering the range of [10-250]. The skin color cluster is vague in the histogram and thus the model accuracy is low.
+![Screenshot from 2023-04-23 19-16-38](https://user-images.githubusercontent.com/60977336/234143630-d1c4b523-40ec-4c6c-b7eb-d3a762dfb2e7.png)
 
-`Figure 3: BGR color space 2D histogram trained model on a 100 images`
+### Other test images:
+![Screenshot from 2023-04-23 19-15-38](https://user-images.githubusercontent.com/60977336/234143827-edf7d54c-0f19-4226-893f-064c75edc140.png)
 
-![BGR_10_train_images_Skin_trained_model](https://user-images.githubusercontent.com/60977336/233509149-ac97111f-f3f0-4f94-b316-cc946dd519d3.png)
+![Screenshot from 2023-04-23 19-12-50](https://user-images.githubusercontent.com/60977336/234143804-e463c748-a540-47b1-91e8-241d1d925c23.png)
 
-Figure 4 displays the test images and the results of the skin color detection using the BGR space with a trained 2D histogram model. The skin
-color is identified with a low accuracy. BGR is thus not a good color space for skin color detection and thus HSV is chosen for the final model.
+![Screenshot from 2023-04-23 19-13-27](https://user-images.githubusercontent.com/60977336/234143808-93431306-cb5b-43e8-b244-23d04c91c9bb.png)
 
-`Figure 4: (Top) - Input test images. (Bottom) - Results with BGR trained 2D histogram model`
-
-![RGB_10_train_images_Skin_trained_model](https://user-images.githubusercontent.com/60977336/233509225-a1d27d77-00c3-47bd-98db-7bff16eba28b.png)
+![Screenshot from 2023-04-23 19-14-11](https://user-images.githubusercontent.com/60977336/234143823-fa587e30-1a42-4f3e-8f82-1f6c2c016f45.png)
 
 
-Figure 5 displays a sample form the training dataset that was used.
 
-`Figure 5: Training dataset sample`
 
-![image](https://user-images.githubusercontent.com/60977336/233509258-82c02163-d734-4a7e-b0ed-deb9a05714bc.png)
+
 
 
 
