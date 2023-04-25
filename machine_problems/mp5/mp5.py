@@ -1,3 +1,10 @@
+"""
+Canny edge detection implemented from scratch
+
+Author: Marthinus (Marno) Nel
+Date: 04/24/2023
+"""
+
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
