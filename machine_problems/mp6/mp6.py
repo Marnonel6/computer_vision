@@ -123,7 +123,7 @@ def HoughTransform(img, threshold=0.5):
     # Scale theta to be represented in the same size as rho
     ratio = max_rho/max_theta
     # Scale factor for precision - Higher more precision and more computation time
-    precision_scale = 2
+    precision_scale = 3
 
     # Initialize the maximum size of the polar space as the range min to max of theta and rho
     polar_space_voting = np.zeros((int(max_theta*2*ratio*precision_scale), int(max_rho*2*precision_scale)))
@@ -133,7 +133,7 @@ def HoughTransform(img, threshold=0.5):
         for x in range(col):
             if img[y, x] > threshold:
                 # for theta in range(int(min_theta), int(max_theta)):
-                for theta in np.arange(min_theta, max_theta-0.1, 0.01):
+                for theta in np.arange(min_theta, max_theta-0.1, 0.001):
                     rho = x * np.cos(theta) + y * np.sin(theta)
                     polar_space_voting[int((theta + max_theta)*ratio*precision_scale), int((rho + max_rho)*precision_scale)] += 1 # NOTE to make axis positive and not to -pi/2
 
