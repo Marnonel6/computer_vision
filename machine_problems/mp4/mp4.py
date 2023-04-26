@@ -54,7 +54,7 @@ def train_histogram_HSV():
     Flag_first_img = True
 
     # Only load X amount of images
-    training_size = 100
+    training_size = 20
     image_count = 0
 
     """ Using directory """
