@@ -335,14 +335,14 @@ def HoughTransform(img, threshold=0.5):
     print(f"max_rho*2 = {max_rho*2*2}")
 
     # Loop through image and vote for lines
-    for y in range(row):
-        for x in range(col):
-            if img[y, x] > threshold:
+    for x in range(row):
+        for y in range(col):
+            if img[x, y] > threshold:
                 # for theta in range(int(min_theta), int(max_theta)):
                 # for theta in np.arange(min_theta, max_theta-0.1, 0.001):4
                 for theta in range(0, max_theta*2*ratio):
                     # rho = x * np.cos(theta) + y * np.sin(theta)
-                    rho = y * np.cos(theta/1800*np.pi) + x * np.sin(theta/1800*np.pi)
+                    rho = x * np.cos(theta/1800*np.pi) + y * np.sin(theta/1800*np.pi)
                     # polar_space_voting[int((theta + max_theta)*ratio*precision_scale), int((rho + max_rho)*precision_scale)] += 1 # NOTE to make axis positive and not to -pi/2
                     # polar_space_voting[int((theta + max_theta)*ratio), int((rho + max_rho))] += 1 # NOTE to make axis positive and not to -pi/2
                     polar_space_voting[int(theta), int((rho + max_rho)*2)] += 1 # NOTE to make axis positive and not to -pi/2
