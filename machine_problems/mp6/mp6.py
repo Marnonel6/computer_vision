@@ -8,6 +8,8 @@ Date: 04/24/2023
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import copy
+from sklearn.cluster import KMeans
 
 def main():
 
@@ -19,27 +21,105 @@ def main():
     # Edge detection with Sobel
     test_img_magnitude, test_img_direction = Sobel(test_img, 100)
     test2_img_magnitude, test2_img_direction = Sobel(test2_img, 100)
-    input_img_magnitude, input_img_direction = Sobel(input_img, 100)
+    input_img_magnitude, input_img_direction = Sobel(input_img, 50)
 
     # Hough transform
     test_img_hough = HoughTransform(test_img_magnitude, 0.5)
     test2_img_hough = HoughTransform(test2_img_magnitude, 0.5)
     input_img_hough = HoughTransform(input_img_magnitude, 0.5)
 
-    # Filter to only keep higher votes
-    test_img_hough[test_img_hough < 120] = 0
-    test2_img_hough[test2_img_hough < 120] = 0
-    input_img_hough[input_img_hough < 120] = 0
+    # # Filter to only keep higher votes
+    # test_img_hough[test_img_hough < 120] = 0
+    # test2_img_hough[test2_img_hough < 120] = 0
+    # input_img_hough[input_img_hough < 120] = 0
 
-    # Filter out zero values
-    test_img_hough_non_zero = test_img_hough[test_img_hough != 0]
-    test2_img_hough_non_zero = test2_img_hough[test2_img_hough != 0]
-    input_img_hough_non_zero = input_img_hough[input_img_hough != 0]
+    # # Filter out zero values
+    # test_img_hough_non_zero = test_img_hough[test_img_hough != 0]
+    # test2_img_hough_non_zero = test2_img_hough[test2_img_hough != 0]
+    # input_img_hough_non_zero = input_img_hough[input_img_hough != 0]
 
     # Print maximum, minimum, median and mean of non-zero values
-    print('Test Image: Max: {}, Min: {}, Median: {}, Mean: {}'.format(np.max(test_img_hough_non_zero), np.min(test_img_hough_non_zero), np.median(test_img_hough_non_zero), np.mean(test_img_hough_non_zero)))
-    print('Test2 Image: Max: {}, Min: {}, Median: {}, Mean: {}'.format(np.max(test2_img_hough_non_zero), np.min(test2_img_hough_non_zero), np.median(test2_img_hough_non_zero), np.mean(test2_img_hough_non_zero)))
-    print('Input Image: Max: {}, Min: {}, Median: {}, Mean: {}'.format(np.max(input_img_hough_non_zero), np.min(input_img_hough_non_zero), np.median(input_img_hough_non_zero), np.mean(input_img_hough_non_zero)))
+    # print('Test Image: Max: {}, Min: {}, Median: {}, Mean: {}'.format(np.max(test_img_hough_non_zero), np.min(test_img_hough_non_zero), np.median(test_img_hough_non_zero), np.mean(test_img_hough_non_zero)))
+    # print('Test2 Image: Max: {}, Min: {}, Median: {}, Mean: {}'.format(np.max(test2_img_hough_non_zero), np.min(test2_img_hough_non_zero), np.median(test2_img_hough_non_zero), np.mean(test2_img_hough_non_zero)))
+    # print('Input Image: Max: {}, Min: {}, Median: {}, Mean: {}'.format(np.max(input_img_hough_non_zero), np.min(input_img_hough_non_zero), np.median(input_img_hough_non_zero), np.mean(input_img_hough_non_zero)))
+
+    # Filter to only keep higher votes
+    test_img_hough_filter = copy.deepcopy(test_img_hough)
+    test2_img_hough_filter = copy.deepcopy(test2_img_hough)
+    input_img_hough_filter = copy.deepcopy(input_img_hough)
+    test_img_hough_filter[test_img_hough_filter < 100] = 0
+    test2_img_hough_filter[test2_img_hough_filter < 100] = 0
+    input_img_hough_filter[input_img_hough_filter < 100] = 0
+
+    """ K-Means clustering """ 
+    # get the indices of all non-zero elements
+    test_nonzero_indices = np.nonzero(test_img_hough_filter)
+    test2_nonzero_indices = np.nonzero(test2_img_hough_filter)
+    input_nonzero_indices = np.nonzero(input_img_hough_filter)
+
+    # create a list of (x,y) coordinate pairs from the indices
+    test_coordinates = list(zip(test_nonzero_indices[1], test_nonzero_indices[0]))
+    test2_coordinates = list(zip(test2_nonzero_indices[1], test2_nonzero_indices[0]))
+    input_coordinates = list(zip(input_nonzero_indices[1], input_nonzero_indices[0]))
+
+    # use the coordinates list with sklearn
+    test_kmeans = KMeans(n_clusters=4).fit(test_coordinates)
+    test2_kmeans = KMeans(n_clusters=6).fit(test2_coordinates)
+    input_kmeans = KMeans(n_clusters=5).fit(input_coordinates)
+
+    # get the cluster centroids
+    test_centroids = test_kmeans.cluster_centers_
+    test2_centroids = test2_kmeans.cluster_centers_
+    input_centroids = input_kmeans.cluster_centers_
+
+    # Print the centroids
+    print('Test Image Centroids: {}'.format(test_centroids))
+    print('Test2 Image Centroids: {}'.format(test2_centroids))
+    print('Input Image Centroids: {}'.format(input_centroids))
+
+    use_SE = False
+    if use_SE:
+        # 3x3 Square
+        """
+        1 1 1
+        1 1 1
+        1 1 1
+        """
+        # SE = [[-1,-1],[-1,0],[-1,1],
+        #       [0 ,-1],[0 ,0],[0 ,1],
+        #       [1 ,-1],[1 ,0],[1 ,1]]
+
+        # Star
+        """
+        0 1 0
+        1 1 1
+        0 1 0
+        """
+        SE = [[-1,0],[0,-1],[0,0],[0,1],[1,0]]
+
+        # Star with 3x3 in middle
+        """
+        0 1 1 1 0
+        1 1 1 1 1
+        1 1 1 1 1
+        1 1 1 1 1
+        0 1 1 1 0
+        # """
+        # SE = [        [-2,-1],[-2,0],[-2,1],
+        #     [-1,-2],[-1,-1],[-1,0],[-1,1],[-1,2],
+        #     [0 ,-2],[0 ,-1],[0 ,0],[0 ,1],[0 ,2],
+        #     [1 ,-2],[1 ,-1],[1 ,0],[1 ,1],[1 ,2],
+        #             [2 ,-1],[2 ,0],[2 ,1]        ]
+
+        # Preform dilation
+        # test_img_hough = Dilation(test_img_hough, SE, threshold=125)
+        # test2_img_hough = Dilation(test2_img_hough, SE, threshold=125)
+        # input_img_hough = Dilation(input_img_hough, SE, threshold=135)
+
+        # Preform closing
+        test_img_hough = Closing(test_img_hough, SE, threshold=105)
+        test2_img_hough = Closing(test2_img_hough, SE, threshold=105)
+        input_img_hough = Closing(input_img_hough, SE, threshold=105)
 
     # Display images at each step in Hough transform
     plt.figure(1)
@@ -54,6 +134,12 @@ def main():
     plt.xlabel('rho')
     plt.ylabel('theta [Scaled with ratio]')
     plt.title('Hough Transform')
+    plt.subplot(2,3,4)
+    plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test_img_hough_filter), cv2.COLOR_GRAY2RGB))
+    plt.scatter(test_centroids[:,0],test_centroids[:,1])
+    plt.xlabel('rho')
+    plt.ylabel('theta [Scaled with ratio]')
+    plt.title('Hough Transform Filtered')
 
     plt.figure(2)
     plt.subplot(2, 3, 1)
@@ -67,6 +153,12 @@ def main():
     plt.xlabel('rho')
     plt.ylabel('theta [Scaled with ratio]')
     plt.title('Hough Transform')
+    plt.subplot(2,3,4)
+    plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test2_img_hough_filter), cv2.COLOR_GRAY2RGB))
+    plt.scatter(test2_centroids[:,0],test2_centroids[:,1])
+    plt.xlabel('rho')
+    plt.ylabel('theta [Scaled with ratio]')
+    plt.title('Hough Transform Filtered')
 
     plt.figure(3)
     plt.subplot(2, 3, 1)
@@ -80,6 +172,12 @@ def main():
     plt.xlabel('rho')
     plt.ylabel('theta [Scaled with ratio]')
     plt.title('Hough Transform')
+    plt.subplot(2,3,4)
+    plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(input_img_hough_filter), cv2.COLOR_GRAY2RGB))
+    plt.scatter(input_centroids[:,0],input_centroids[:,1])
+    plt.xlabel('rho')
+    plt.ylabel('theta [Scaled with ratio]')
+    plt.title('Hough Transform Filtered')
 
     plt.show()
 
@@ -141,7 +239,7 @@ def HoughTransform(img, threshold=0.5):
     # Scale theta to be represented in the same size as rho
     ratio = max_rho/max_theta
     # Scale factor for precision - Higher more precision and more computation time
-    precision_scale = 3
+    precision_scale = 1
 
     # Initialize the maximum size of the polar space as the range min to max of theta and rho
     polar_space_voting = np.zeros((int(max_theta*2*ratio*precision_scale), int(max_rho*2*precision_scale)))
@@ -166,16 +264,21 @@ def HoughTransform(img, threshold=0.5):
     # # Add 50 if pixel value does not equal 0 to increase visibility of all pixels
     # polar_space_voting[polar_space_voting != 0] += 55
     # NOTE Scaling to 255 used to make image display better
-    # Scale polar_space_voting intensity to have values between 100 and 255
-    polar_space_voting *= 155.0 / polar_space_voting.max()
-    # Add 50 if pixel value does not equal 0 to increase visibility of all pixels
-    polar_space_voting[polar_space_voting != 0] += 100
+    # # NOTE BETTER ONE below
+    # # Scale polar_space_voting intensity to have values between 100 and 255
+    # polar_space_voting *= 155.0 / polar_space_voting.max()
+    # # Add 50 if pixel value does not equal 0 to increase visibility of all pixels
+    # polar_space_voting[polar_space_voting != 0] += 100
     """ 2 """
-    # # NOTE histogram_equalization used to make image display better
-    # polar_space_voting *= 255.0 / polar_space_voting.max()
-    # histogram_equalization(cv2.convertScaleAbs(polar_space_voting))
+    # NOTE histogram_equalization used to make image display better
+    polar_space_voting *= 255.0 / polar_space_voting.max()
+    histogram_equalization(cv2.convertScaleAbs(polar_space_voting))
 
     return polar_space_voting
+
+"""
+Histogram equalization
+"""
 
 """
 Image Histogram Equalization
@@ -198,13 +301,13 @@ def histogram_equalization(image):
     cumulative_hist = np.cumsum(hist)
     # Normalize the cumulative values
     cumulative_normalized = cumulative_hist / np.max(cumulative_hist)
-    # Plot cumulative distribution
-    plt.figure()
-    plt.plot(bins[:-1], cumulative_normalized)
-    # Set the axis labels and title
-    plt.xlabel('Input image pixel intensity')
-    plt.ylabel('Output image pixel intensity normalized')
-    plt.title('Cumulative histogram distribution')
+    # # Plot cumulative distribution
+    # plt.figure()
+    # plt.plot(bins[:-1], cumulative_normalized)
+    # # Set the axis labels and title
+    # plt.xlabel('Input image pixel intensity')
+    # plt.ylabel('Output image pixel intensity normalized')
+    # plt.title('Cumulative histogram distribution')
 
     # Copy image
     histogram_equalization_image = image.copy()
@@ -217,8 +320,8 @@ def histogram_equalization(image):
     # Plot histogram of new histogram equalization image
     image_histogram_equalization(histogram_equalization_image)
 
-    # Show plots
-    plt.show()
+    # # Show plots
+    # plt.show()
 
     return histogram_equalization_image
 
@@ -232,14 +335,14 @@ def image_histogram(image):
     # Histogram of pixel intensities
     histogram, bins = np.histogram(image.ravel(), bins=256, range=[0, 256])
 
-    # Plot the histogram
-    plt.figure()
-    plt.plot(histogram, color='black')
-    # Set the axis labels and title
-    plt.xlabel('Pixel Intensity')
-    plt.ylabel('Frequency')
-    plt.title('Original Histogram of image intensities')
-    plt.show()
+    # # Plot the histogram
+    # plt.figure()
+    # plt.plot(histogram, color='black')
+    # # Set the axis labels and title
+    # plt.xlabel('Pixel Intensity')
+    # plt.ylabel('Frequency')
+    # plt.title('Original Histogram of image intensities')
+    # plt.show()
 
 """
 Plot histogram of new histogram equalization image
@@ -251,15 +354,135 @@ def image_histogram_equalization(image):
     # Histogram of pixel intensities
     histogram2, bins2 = np.histogram(image.ravel(), bins=256, range=[0, 256])
 
-    # Plot the histogram
-    plt.figure()
-    plt.plot(histogram2, color='black')
-    # Set the axis labels and title
-    plt.xlabel('Pixel Intensity')
-    plt.ylabel('Frequency')
-    plt.title('Histogram of histogram equalization image intensities')
+    # # Plot the histogram
+    # plt.figure()
+    # plt.plot(histogram2, color='black')
+    # # Set the axis labels and title
+    # plt.xlabel('Pixel Intensity')
+    # plt.ylabel('Frequency')
+    # plt.title('Histogram of histogram equalization image intensities')
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+Morphological operators
+"""
+
+"""
+Dilation of an image
+args:
+    - image: (cv2.IMREAD_GRAYSCALE) A bit map image
+    - SE: (List) Structured element coordinates in a list
+    - threshold: (int) Threshold value for dilation
+
+returns:
+    - dilation: (cv2.IMREAD_GRAYSCALE) Dilation of image
+"""
+def Dilation(image, SE, threshold=255):
+    # Get image dimensions
+    height, width = image.shape
+    # Dilation image
+    dilation = np.zeros((height, width))
+
+    # Loop through image
+    for u in range(height):
+        for v in range(width):
+            if image[u,v] >= threshold: # If pixel is greater than the threshold add the SE with it's centre at [u,v]
+                for se in SE:
+                    x = se[0] + u
+                    y = se[1] + v
+                    if height > x >= 0 and width > y >= 0: # Check if inside the images
+                        dilation[x,y] = 255
+
+    return dilation
+
+"""
+Erosion of an image
+args:
+    - image: (cv2.IMREAD_GRAYSCALE) A bit map image
+    - SE: (List) Structured element coordinates in a list
+"""
+def Erosion(image, SE, threshold=255):
+    # Get image dimensions
+    height, width = image.shape
+    # Erosion images
+    erosion = image.copy()
+
+    # Loop through image
+    for u in range(height):
+        for v in range(width):
+            # Subset flag to flag if SE is a subset of the object
+            subset = True
+            if image[u,v] >= threshold: # If pixel is white
+                # Check if SE is a subset of the object if not then make [u,v] black
+                for se in SE:
+                    x = se[0] + u
+                    y = se[1] + v
+                    if height > x >= 0 and width > y >= 0: # Check if inside the images
+                        if image[x,y] == 0: # <=threshold: # Black pixel thus SE is not a subset of the object
+                            subset = False
+                # If SE is not a subset if the object then make the pixel black
+                if subset == False:
+                    erosion[u,v] = 0
+
+    return erosion
+
+"""
+Opening of an image
+args:
+    - image: (cv2.IMREAD_GRAYSCALE) A bit map image
+    - SE: (List) Structured element coordinates in a list
+"""
+def Opening(image, SE):
+
+    # Opening image
+    opening = image.copy()
+
+    # Erosion then Dilation
+    opening = Erosion(opening, SE)
+    opening = Dilation(opening, SE)
+
+    return opening
+
+"""
+Closing of an image
+
+args:
+    - image: (cv2.IMREAD_GRAYSCALE) A bit map image
+    - SE: (List) Structured element coordinates in a list
+    - threshold: (int) Threshold value for dilation and erosion
+"""
+def Closing(image, SE, threshold=255):
+
+    # Closing image
+    closing = image.copy()
+
+    # Dilation then Erosion
+    closing = Dilation(closing, SE, threshold)
+    closing = Erosion(closing, SE)
+    closing[closing < threshold] = 0
+
+    return closing
 
 if __name__ == '__main__':
     main()
