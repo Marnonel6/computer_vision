@@ -41,11 +41,6 @@ def main():
     # test2_img_hough_non_zero = test2_img_hough[test2_img_hough != 0]
     # input_img_hough_non_zero = input_img_hough[input_img_hough != 0]
 
-    # Print maximum, minimum, median and mean of non-zero values
-    # print('Test Image: Max: {}, Min: {}, Median: {}, Mean: {}'.format(np.max(test_img_hough_non_zero), np.min(test_img_hough_non_zero), np.median(test_img_hough_non_zero), np.mean(test_img_hough_non_zero)))
-    # print('Test2 Image: Max: {}, Min: {}, Median: {}, Mean: {}'.format(np.max(test2_img_hough_non_zero), np.min(test2_img_hough_non_zero), np.median(test2_img_hough_non_zero), np.mean(test2_img_hough_non_zero)))
-    # print('Input Image: Max: {}, Min: {}, Median: {}, Mean: {}'.format(np.max(input_img_hough_non_zero), np.min(input_img_hough_non_zero), np.median(input_img_hough_non_zero), np.mean(input_img_hough_non_zero)))
-
     # Filter to only keep higher votes
     test_img_hough_filter = copy.deepcopy(test_img_hough)
     test2_img_hough_filter = copy.deepcopy(test2_img_hough)
@@ -82,14 +77,10 @@ def main():
 
     # Test Image
     for cluster in test_centroids:
-        print(f"cluster = {cluster}")
         rho = cluster[0]/preci_scale_test-max_rho_test
         theta = (cluster[1]/(max_theta_test*2*ratio_test*preci_scale_test))*np.pi
-        print(f"rho = {rho}")
-        print(f"theta = {theta}")
         for x in range(test_img.shape[0]):
             y = (rho - x*np.cos(theta))/np.sin(theta)
-            # print(f"y = {y}")
             if y >= 0 and y < test_img.shape[1]:
                 predicted_lines_test[x,int(y)] = 255
 
@@ -111,126 +102,76 @@ def main():
             if y >= 0 and y < input_img.shape[1]:
                 predicted_lines_input[x,int(y)] = 255
 
+    Display_images = True
+    if Display_images:
+        # Display images at each step in Hough transform
+        plt.figure(1)
+        plt.subplot(2, 3, 1)
+        plt.imshow(cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB))
+        plt.title('Input')
+        plt.subplot(2,3,2)
+        plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test_img_magnitude), cv2.COLOR_GRAY2RGB))
+        plt.title('Sobel Edge')
+        plt.subplot(2,3,3)
+        plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test_img_hough), cv2.COLOR_GRAY2RGB))
+        plt.xlabel('rho')
+        plt.ylabel('theta [Scaled with ratio]')
+        plt.title('Hough Transform')
+        plt.subplot(2,3,4)
+        plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test_img_hough_filter), cv2.COLOR_GRAY2RGB))
+        plt.scatter(test_centroids[:,0],test_centroids[:,1])
+        plt.xlabel('rho')
+        plt.ylabel('theta [Scaled with ratio]')
+        plt.title('Hough Transform Filtered')
+        plt.subplot(2,3,5)
+        plt.imshow(predicted_lines_test)
+        plt.title('Predicted Lines')
 
-    use_SE = False
-    if use_SE:
-        # 3x3 Square
-        """
-        1 1 1
-        1 1 1
-        1 1 1
-        """
-        # SE = [[-1,-1],[-1,0],[-1,1],
-        #       [0 ,-1],[0 ,0],[0 ,1],
-        #       [1 ,-1],[1 ,0],[1 ,1]]
+        plt.figure(2)
+        plt.subplot(2, 3, 1)
+        plt.imshow(cv2.cvtColor(test2_img, cv2.COLOR_BGR2RGB))
+        plt.title('Test2 Image')
+        plt.subplot(2,3,2)
+        plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test2_img_magnitude), cv2.COLOR_GRAY2RGB))
+        plt.title('Sobel Edge')
+        plt.subplot(2,3,3)
+        plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test2_img_hough), cv2.COLOR_GRAY2RGB))
+        plt.xlabel('rho')
+        plt.ylabel('theta [Scaled with ratio]')
+        plt.title('Hough Transform')
+        plt.subplot(2,3,4)
+        plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test2_img_hough_filter), cv2.COLOR_GRAY2RGB))
+        plt.scatter(test2_centroids[:,0],test2_centroids[:,1])
+        plt.xlabel('rho')
+        plt.ylabel('theta [Scaled with ratio]')
+        plt.title('Hough Transform Filtered')
+        plt.subplot(2,3,5)
+        plt.imshow(predicted_lines_test2)
+        plt.title('Predicted Lines')
 
-        # Star
-        """
-        0 1 0
-        1 1 1
-        0 1 0
-        """
-        SE = [[-1,0],[0,-1],[0,0],[0,1],[1,0]]
+        plt.figure(3)
+        plt.subplot(2, 3, 1)
+        plt.imshow(cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB))
+        plt.title('Input Image')
+        plt.subplot(2,3,2)
+        plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(input_img_magnitude), cv2.COLOR_GRAY2RGB))
+        plt.title('Sobel Edge')
+        plt.subplot(2,3,3)
+        plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(input_img_hough), cv2.COLOR_GRAY2RGB))
+        plt.xlabel('rho')
+        plt.ylabel('theta [Scaled with ratio]')
+        plt.title('Hough Transform')
+        plt.subplot(2,3,4)
+        plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(input_img_hough_filter), cv2.COLOR_GRAY2RGB))
+        plt.scatter(input_centroids[:,0],input_centroids[:,1])
+        plt.xlabel('rho')
+        plt.ylabel('theta [Scaled with ratio]')
+        plt.title('Hough Transform Filtered')
+        plt.subplot(2,3,5)
+        plt.imshow(predicted_lines_input)
+        plt.title('Predicted Lines')
 
-        # Star with 3x3 in middle
-        """
-        0 1 1 1 0
-        1 1 1 1 1
-        1 1 1 1 1
-        1 1 1 1 1
-        0 1 1 1 0
-        # """
-        # SE = [        [-2,-1],[-2,0],[-2,1],
-        #     [-1,-2],[-1,-1],[-1,0],[-1,1],[-1,2],
-        #     [0 ,-2],[0 ,-1],[0 ,0],[0 ,1],[0 ,2],
-        #     [1 ,-2],[1 ,-1],[1 ,0],[1 ,1],[1 ,2],
-        #             [2 ,-1],[2 ,0],[2 ,1]        ]
-
-        # Preform dilation
-        # test_img_hough = Dilation(test_img_hough, SE, threshold=125)
-        # test2_img_hough = Dilation(test2_img_hough, SE, threshold=125)
-        # input_img_hough = Dilation(input_img_hough, SE, threshold=135)
-
-        # Preform closing
-        test_img_hough = Closing(test_img_hough, SE, threshold=105)
-        test2_img_hough = Closing(test2_img_hough, SE, threshold=105)
-        input_img_hough = Closing(input_img_hough, SE, threshold=105)
-
-    # Display images at each step in Hough transform
-    plt.figure(1)
-    plt.subplot(2, 3, 1)
-    plt.imshow(cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB))
-    plt.title('Input')
-    plt.subplot(2,3,2)
-    plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test_img_magnitude), cv2.COLOR_GRAY2RGB))
-    plt.title('Sobel Edge')
-    plt.subplot(2,3,3)
-    plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test_img_hough), cv2.COLOR_GRAY2RGB))
-    plt.xlabel('rho')
-    plt.ylabel('theta [Scaled with ratio]')
-    plt.title('Hough Transform')
-    plt.subplot(2,3,4)
-    plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test_img_hough_filter), cv2.COLOR_GRAY2RGB))
-    plt.scatter(test_centroids[:,0],test_centroids[:,1])
-    plt.xlabel('rho')
-    plt.ylabel('theta [Scaled with ratio]')
-    plt.title('Hough Transform Filtered')
-    plt.subplot(2,3,5)
-    # plt.imshow(cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB))
-    # plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(predicted_lines_test), cv2.COLOR_GRAY2RGB))
-    plt.imshow(predicted_lines_test)
-    plt.title('Predicted Lines')
-
-    plt.figure(2)
-    plt.subplot(2, 3, 1)
-    plt.imshow(cv2.cvtColor(test2_img, cv2.COLOR_BGR2RGB))
-    plt.title('Test2 Image')
-    plt.subplot(2,3,2)
-    plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test2_img_magnitude), cv2.COLOR_GRAY2RGB))
-    plt.title('Sobel Edge')
-    plt.subplot(2,3,3)
-    plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test2_img_hough), cv2.COLOR_GRAY2RGB))
-    plt.xlabel('rho')
-    plt.ylabel('theta [Scaled with ratio]')
-    plt.title('Hough Transform')
-    plt.subplot(2,3,4)
-    plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test2_img_hough_filter), cv2.COLOR_GRAY2RGB))
-    plt.scatter(test2_centroids[:,0],test2_centroids[:,1])
-    plt.xlabel('rho')
-    plt.ylabel('theta [Scaled with ratio]')
-    plt.title('Hough Transform Filtered')
-    plt.subplot(2,3,5)
-    # plt.imshow(cv2.cvtColor(test2_img, cv2.COLOR_BGR2RGB))
-    # plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(predicted_lines_test2), cv2.COLOR_GRAY2RGB))
-    plt.imshow(predicted_lines_test2)
-    plt.title('Predicted Lines')
-
-
-    plt.figure(3)
-    plt.subplot(2, 3, 1)
-    plt.imshow(cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB))
-    plt.title('Input Image')
-    plt.subplot(2,3,2)
-    plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(input_img_magnitude), cv2.COLOR_GRAY2RGB))
-    plt.title('Sobel Edge')
-    plt.subplot(2,3,3)
-    plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(input_img_hough), cv2.COLOR_GRAY2RGB))
-    plt.xlabel('rho')
-    plt.ylabel('theta [Scaled with ratio]')
-    plt.title('Hough Transform')
-    plt.subplot(2,3,4)
-    plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(input_img_hough_filter), cv2.COLOR_GRAY2RGB))
-    plt.scatter(input_centroids[:,0],input_centroids[:,1])
-    plt.xlabel('rho')
-    plt.ylabel('theta [Scaled with ratio]')
-    plt.title('Hough Transform Filtered')
-    plt.subplot(2,3,5)
-    # plt.imshow(cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB))
-    # plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(predicted_lines_input), cv2.COLOR_GRAY2RGB))
-    plt.imshow(predicted_lines_input)
-    plt.title('Predicted Lines')
-
-    plt.show()
+        plt.show()
 
 
 """
@@ -415,128 +356,6 @@ def image_histogram_equalization(image):
     # plt.xlabel('Pixel Intensity')
     # plt.ylabel('Frequency')
     # plt.title('Histogram of histogram equalization image intensities')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-Morphological operators
-"""
-
-"""
-Dilation of an image
-args:
-    - image: (cv2.IMREAD_GRAYSCALE) A bit map image
-    - SE: (List) Structured element coordinates in a list
-    - threshold: (int) Threshold value for dilation
-
-returns:
-    - dilation: (cv2.IMREAD_GRAYSCALE) Dilation of image
-"""
-def Dilation(image, SE, threshold=255):
-    # Get image dimensions
-    height, width = image.shape
-    # Dilation image
-    dilation = np.zeros((height, width))
-
-    # Loop through image
-    for u in range(height):
-        for v in range(width):
-            if image[u,v] >= threshold: # If pixel is greater than the threshold add the SE with it's centre at [u,v]
-                for se in SE:
-                    x = se[0] + u
-                    y = se[1] + v
-                    if height > x >= 0 and width > y >= 0: # Check if inside the images
-                        dilation[x,y] = 255
-
-    return dilation
-
-"""
-Erosion of an image
-args:
-    - image: (cv2.IMREAD_GRAYSCALE) A bit map image
-    - SE: (List) Structured element coordinates in a list
-"""
-def Erosion(image, SE, threshold=255):
-    # Get image dimensions
-    height, width = image.shape
-    # Erosion images
-    erosion = image.copy()
-
-    # Loop through image
-    for u in range(height):
-        for v in range(width):
-            # Subset flag to flag if SE is a subset of the object
-            subset = True
-            if image[u,v] >= threshold: # If pixel is white
-                # Check if SE is a subset of the object if not then make [u,v] black
-                for se in SE:
-                    x = se[0] + u
-                    y = se[1] + v
-                    if height > x >= 0 and width > y >= 0: # Check if inside the images
-                        if image[x,y] == 0: # <=threshold: # Black pixel thus SE is not a subset of the object
-                            subset = False
-                # If SE is not a subset if the object then make the pixel black
-                if subset == False:
-                    erosion[u,v] = 0
-
-    return erosion
-
-"""
-Opening of an image
-args:
-    - image: (cv2.IMREAD_GRAYSCALE) A bit map image
-    - SE: (List) Structured element coordinates in a list
-"""
-def Opening(image, SE):
-
-    # Opening image
-    opening = image.copy()
-
-    # Erosion then Dilation
-    opening = Erosion(opening, SE)
-    opening = Dilation(opening, SE)
-
-    return opening
-
-"""
-Closing of an image
-
-args:
-    - image: (cv2.IMREAD_GRAYSCALE) A bit map image
-    - SE: (List) Structured element coordinates in a list
-    - threshold: (int) Threshold value for dilation and erosion
-"""
-def Closing(image, SE, threshold=255):
-
-    # Closing image
-    closing = image.copy()
-
-    # Dilation then Erosion
-    closing = Dilation(closing, SE, threshold)
-    closing = Erosion(closing, SE)
-    closing[closing < threshold] = 0
-
-    return closing
 
 if __name__ == '__main__':
     main()
