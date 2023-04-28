@@ -1,4 +1,4 @@
-# Hough Transform algorithm for line ditection
+# Hough Transform algorithm for straight line detection
 The Hough transform is a computer vision technique used to detect straight lines in an image. It works by converting the image space to a parameter space, where each point represents a line in the original image. The transform then accumulates points in the parameter space for each edge pixel in the image. The resulting accumulation will have peaks that correspond to the parameters of the straight lines in the image. The Hough transform can handle noise, gaps, and partial occlusion in the image, making it a popular technique for line detection in computer vision.
 
 Below is a description of the 4 main steps used to implement a Hough Transform line detection algorithm:
