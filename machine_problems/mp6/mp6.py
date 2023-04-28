@@ -84,7 +84,7 @@ def main():
     for cluster in test_centroids:
         print(f"cluster = {cluster}")
         rho = cluster[0]/preci_scale_test-max_rho_test
-        theta = (cluster[1]/(max_theta_test*2*ratio_test))*np.pi
+        theta = (cluster[1]/(max_theta_test*2*ratio_test*preci_scale_test))*np.pi
         print(f"rho = {rho}")
         print(f"theta = {theta}")
         for x in range(test_img.shape[0]):
@@ -96,7 +96,7 @@ def main():
     # Test2 Image
     for cluster in test2_centroids:
         rho = cluster[0]/preci_scale_test2-max_rho_test2
-        theta = (cluster[1]/(max_theta_test2*2*ratio_test2))*np.pi
+        theta = (cluster[1]/(max_theta_test2*2*ratio_test2*preci_scale_test))*np.pi
         for x in range(test2_img.shape[0]):
             y = (rho - x*np.cos(theta))/np.sin(theta)
             if y >= 0 and y < test2_img.shape[1]:
@@ -105,7 +105,7 @@ def main():
     # Input Image
     for cluster in input_centroids:
         rho = cluster[0]/preci_scale_input-max_rho_input
-        theta = (cluster[1]/(max_theta_input*2*ratio_input))*np.pi
+        theta = (cluster[1]/(max_theta_input*2*ratio_input*preci_scale_test))*np.pi
         for x in range(input_img.shape[0]):
             y = (rho - x*np.cos(theta))/np.sin(theta)
             if y >= 0 and y < input_img.shape[1]:
@@ -289,17 +289,14 @@ def HoughTransform(img, threshold=0.5):
     max_theta = 90
     min_theta = -90
 
-
     # Scale theta to be represented in the same size as rho
     ratio = int(max_rho/max_theta)
-    print(f"ratio = {ratio}")
-    # ratio = 10
     # Scale factor for precision - Higher more precision and more computation time
-    precision_scale = 2
+    precision_scale = 3
 
     # Initialize the maximum size of the polar space as the range min to max of theta and rho
     # polar_space_voting = np.zeros((int(max_theta*2*ratio*precision_scale), int(max_rho*2*precision_scale)))
-    polar_space_voting = np.zeros((int(max_theta*2*ratio), int(max_rho*2)*precision_scale))
+    polar_space_voting = np.zeros((int(max_theta*2*ratio)*precision_scale, int(max_rho*2)*precision_scale))
 
     # Loop through image and vote for lines
     for x in range(row):
@@ -307,11 +304,10 @@ def HoughTransform(img, threshold=0.5):
             if img[x, y] > threshold:
                 # for theta in range(int(min_theta), int(max_theta)):
                 # for theta in np.arange(min_theta, max_theta-0.1, 0.001):
-                for theta in range(0, max_theta*2*ratio):
-                    rho = x * np.cos(theta) + y * np.sin(theta)
+                for theta in range(0, max_theta*2*ratio*precision_scale):
                     # rho = x * np.cos(theta/1800*np.pi) + y * np.sin(theta/1800*np.pi) # NOTE CS
-                    rho = x * np.cos((theta/(max_theta*2*ratio))*np.pi) + \
-                          y * np.sin((theta/(max_theta*2*ratio))*np.pi)
+                    rho = x * np.cos((theta/(max_theta*2*ratio*precision_scale))*np.pi) + \
+                          y * np.sin((theta/(max_theta*2*ratio*precision_scale))*np.pi)
                     # polar_space_voting[int((theta + max_theta)*ratio*precision_scale), int((rho + max_rho)*precision_scale)] += 1 # NOTE to make axis positive and not to -pi/2
                     # polar_space_voting[int((theta + max_theta)*ratio), int((rho + max_rho))] += 1 # NOTE to make axis positive and not to -pi/2
                     polar_space_voting[int(theta), int((rho + max_rho)*precision_scale)] += 1
