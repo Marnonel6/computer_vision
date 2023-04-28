@@ -1,5 +1,5 @@
 """
-ABCD
+Hough transform: Algorithm for line detection.
 
 Author: Marthinus (Marno) Nel
 Date: 04/27/2023
@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans 
 
 def main():
 
