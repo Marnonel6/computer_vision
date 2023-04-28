@@ -1,5 +1,5 @@
 """
-Hough transform: Algorithm for line detection.
+Hough transform: Algorithm for line detection
 
 Author: Marthinus (Marno) Nel
 Date: 04/27/2023
