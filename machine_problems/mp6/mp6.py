@@ -2,7 +2,7 @@
 ABCD
 
 Author: Marthinus (Marno) Nel
-Date: 04/24/2023
+Date: 04/27/2023
 """
 
 import cv2
@@ -13,17 +13,20 @@ from sklearn.cluster import KMeans
 
 def main():
 
+    # NOTE Debug
+    print("RUNNING!")
+
     # Load in images as BGR
     test_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp6/test_images/test.bmp', cv2.IMREAD_COLOR)
     test2_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp6/test_images/test2.bmp', cv2.IMREAD_COLOR)
     input_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp6/test_images/input.bmp', cv2.IMREAD_COLOR)
 
-    # Edge detection with Sobel
+    """ Edge detection with Sobel """
     test_img_magnitude, test_img_direction = Sobel(test_img, 100)
     test2_img_magnitude, test2_img_direction = Sobel(test2_img, 100)
     input_img_magnitude, input_img_direction = Sobel(input_img, 50)
 
-    # Hough transform
+    """ Hough transform """
     test_img_hough, ratio_test, preci_scale_test, max_rho_test, max_theta_test = \
         HoughTransform(test_img_magnitude, 0.5)
     test2_img_hough, ratio_test2, preci_scale_test2, max_rho_test2, max_theta_test2 = \
@@ -31,50 +34,37 @@ def main():
     input_img_hough, ratio_input, preci_scale_input, max_rho_input, max_theta_input = \
         HoughTransform(input_img_magnitude, 0.5)
 
-    # # Filter to only keep higher votes
-    # test_img_hough[test_img_hough < 120] = 0
-    # test2_img_hough[test2_img_hough < 120] = 0
-    # input_img_hough[input_img_hough < 120] = 0
-
-    # # Filter out zero values
-    # test_img_hough_non_zero = test_img_hough[test_img_hough != 0]
-    # test2_img_hough_non_zero = test2_img_hough[test2_img_hough != 0]
-    # input_img_hough_non_zero = input_img_hough[input_img_hough != 0]
-
     # Filter to only keep higher votes
     test_img_hough_filter = copy.deepcopy(test_img_hough)
     test2_img_hough_filter = copy.deepcopy(test2_img_hough)
     input_img_hough_filter = copy.deepcopy(input_img_hough)
     test_img_hough_filter[test_img_hough_filter < 100] = 0
     test2_img_hough_filter[test2_img_hough_filter < 100] = 0
-    input_img_hough_filter[input_img_hough_filter < 100] = 0
+    input_img_hough_filter[input_img_hough_filter < 130] = 0
 
     """ K-Means clustering """ 
     # get the indices of all non-zero elements
     test_nonzero_indices = np.nonzero(test_img_hough_filter)
     test2_nonzero_indices = np.nonzero(test2_img_hough_filter)
     input_nonzero_indices = np.nonzero(input_img_hough_filter)
-
     # create a list of (x,y) coordinate pairs from the indices
     test_coordinates = list(zip(test_nonzero_indices[1], test_nonzero_indices[0]))
     test2_coordinates = list(zip(test2_nonzero_indices[1], test2_nonzero_indices[0]))
     input_coordinates = list(zip(input_nonzero_indices[1], input_nonzero_indices[0]))
-
     # use the coordinates list with sklearn
     test_kmeans = KMeans(n_clusters=4).fit(test_coordinates)
     test2_kmeans = KMeans(n_clusters=6).fit(test2_coordinates)
     input_kmeans = KMeans(n_clusters=5).fit(input_coordinates)
-
     # get the cluster centroids
     test_centroids = test_kmeans.cluster_centers_
     test2_centroids = test2_kmeans.cluster_centers_
     input_centroids = input_kmeans.cluster_centers_
 
-    # Plot lines with the cluster centroid [rho, theta] values
+    """ Draw predicted lines with Cluster centroids [rho, theta] """
+    # Create a copy of original image to add predicted lines to
     predicted_lines_test = copy.deepcopy(test_img)
     predicted_lines_test2 = copy.deepcopy(test2_img)
     predicted_lines_input = copy.deepcopy(input_img)
-
     # Test Image
     for cluster in test_centroids:
         rho = cluster[0]/preci_scale_test-max_rho_test
@@ -83,7 +73,6 @@ def main():
             y = (rho - x*np.cos(theta))/np.sin(theta)
             if y >= 0 and y < test_img.shape[1]:
                 predicted_lines_test[x,int(y)] = 255
-
     # Test2 Image
     for cluster in test2_centroids:
         rho = cluster[0]/preci_scale_test2-max_rho_test2
@@ -92,7 +81,6 @@ def main():
             y = (rho - x*np.cos(theta))/np.sin(theta)
             if y >= 0 and y < test2_img.shape[1]:
                 predicted_lines_test2[x,int(y)] = 255
-
     # Input Image
     for cluster in input_centroids:
         rho = cluster[0]/preci_scale_input-max_rho_input
@@ -101,6 +89,9 @@ def main():
             y = (rho - x*np.cos(theta))/np.sin(theta)
             if y >= 0 and y < input_img.shape[1]:
                 predicted_lines_input[x,int(y)] = 255
+
+    # NOTE Debug
+    print("FINISHED!")
 
     # Display images
     Display_images = True
@@ -193,7 +184,7 @@ def main():
         plt.ylabel('theta')
         plt.title('Cluster Centroids [K-means]')
         plt.subplot(2,3,6)
-        plt.imshow(predicted_lines_input)
+        plt.imshow(cv2.cvtColor(predicted_lines_input, cv2.COLOR_BGR2RGB))
         plt.title('Predicted Lines')
 
         plt.show()
@@ -230,7 +221,7 @@ def Sobel(img, threshold):
     return magnitude, direction
 
 """
-Use Sobel edge image to vote for lines in polar space (rho, theta)(Parameter space)
+Calculate Hough Transform: use Sobel edge image to vote for lines in polar space (rho, theta)(Parameter space)
 
 args:
     - img: (cv2 - gray image) image with edges detected from Sobel or other edge detectors
@@ -239,11 +230,10 @@ return:
     - polar_space_voting: (np.array) polar space with votes for lines
     - ratio: (float) ratio between max_rho and max_theta
     - precision_scale: (int) increase or decrease precision
+    - max_rho: (float) Maximum value of row in positive axis [sqrt(R^2 + C^2)]
+    - max_theta: (float) Maximum value of column in positive axis [pi/2]
 """
 def HoughTransform(img, threshold=0.5):
-    # NOTE Debug
-    print("Start!")
-
     # Get image dimensions
     row, col = img.shape
 
@@ -257,28 +247,19 @@ def HoughTransform(img, threshold=0.5):
     # Scale theta to be represented in the same size as rho
     ratio = int(max_rho/max_theta)
     # Scale factor for precision - Higher more precision and more computation time
-    precision_scale = 3
+    precision_scale = 1
 
-    # Initialize the maximum size of the polar space as the range min to max of theta and rho
-    # polar_space_voting = np.zeros((int(max_theta*2*ratio*precision_scale), int(max_rho*2*precision_scale)))
+    # Initialize the maximum size of the polar space as the range min to max of theta and rho and scaling
     polar_space_voting = np.zeros((int(max_theta*2*ratio)*precision_scale, int(max_rho*2)*precision_scale))
 
     # Loop through image and vote for lines
     for x in range(row):
         for y in range(col):
             if img[x, y] > threshold:
-                # for theta in range(int(min_theta), int(max_theta)):
-                # for theta in np.arange(min_theta, max_theta-0.1, 0.001):
                 for theta in range(0, max_theta*2*ratio*precision_scale):
-                    # rho = x * np.cos(theta/1800*np.pi) + y * np.sin(theta/1800*np.pi) # NOTE CS
                     rho = x * np.cos((theta/(max_theta*2*ratio*precision_scale))*np.pi) + \
                           y * np.sin((theta/(max_theta*2*ratio*precision_scale))*np.pi)
-                    # polar_space_voting[int((theta + max_theta)*ratio*precision_scale), int((rho + max_rho)*precision_scale)] += 1 # NOTE to make axis positive and not to -pi/2
-                    # polar_space_voting[int((theta + max_theta)*ratio), int((rho + max_rho))] += 1 # NOTE to make axis positive and not to -pi/2
                     polar_space_voting[int(theta), int((rho + max_rho)*precision_scale)] += 1
-
-    # NOTE Debug
-    print("Done!")
 
     """ Scaling for clearer parameter display. Choose 1 or 2"""
     """ 1 """
@@ -298,7 +279,6 @@ def HoughTransform(img, threshold=0.5):
 """
 Histogram equalization
 """
-
 """
 Image Histogram Equalization
 
