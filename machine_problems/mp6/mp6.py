@@ -28,21 +28,20 @@ def main():
 
     """ Hough transform """
     test_img_hough, ratio_test, preci_scale_test, max_rho_test, max_theta_test = \
-        HoughTransform(test_img_magnitude, 0.5)
+        HoughTransform(test_img_magnitude)
     test2_img_hough, ratio_test2, preci_scale_test2, max_rho_test2, max_theta_test2 = \
-        HoughTransform(test2_img_magnitude, 0.5)
+        HoughTransform(test2_img_magnitude)
     input_img_hough, ratio_input, preci_scale_input, max_rho_input, max_theta_input = \
-        HoughTransform(input_img_magnitude, 0.5)
+        HoughTransform(input_img_magnitude)
 
-    # Filter to only keep higher votes
+    """ K-Means clustering """
+    # Filter to only keep higher votes/clusters
     test_img_hough_filter = copy.deepcopy(test_img_hough)
     test2_img_hough_filter = copy.deepcopy(test2_img_hough)
     input_img_hough_filter = copy.deepcopy(input_img_hough)
     test_img_hough_filter[test_img_hough_filter < 100] = 0
     test2_img_hough_filter[test2_img_hough_filter < 100] = 0
     input_img_hough_filter[input_img_hough_filter < 130] = 0
-
-    """ K-Means clustering """ 
     # get the indices of all non-zero elements
     test_nonzero_indices = np.nonzero(test_img_hough_filter)
     test2_nonzero_indices = np.nonzero(test2_img_hough_filter)
