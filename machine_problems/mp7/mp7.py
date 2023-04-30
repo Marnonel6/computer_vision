@@ -54,13 +54,10 @@ def main():
     bbox_center = [145, 90]   # Fist image center of face bounding box
 
     # Preform SSD - Sum of squared difference motion tracking
-    object_tracked_video_SSD = motion_tracking_SSD(video, video_hsv, bbox_center, step_size=5) # NOTE step_size = 1 is the most accurate
+    # NOTE step_size = 2 & search_window = 10 is the most accurate and time efficient
+    object_tracked_video_SSD = motion_tracking_SSD(video, video_hsv, bbox_center, search_window=10, step_size=5)
 
-
-
-
-
-
+    # Display the video
     while True:
         for frame in object_tracked_video_SSD:
             cv2.imshow('object_tracked_video_SSD', frame)
@@ -71,102 +68,6 @@ def main():
 
     # NOTE Debug
     print("FINISHED!")
-
-    # # Display images
-    # Display_images = True
-    # if Display_images:
-    #     # Display images at each step
-    #     plt.figure(1)
-    #     plt.subplot(2, 3, 1)
-    #     plt.imshow(cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB))
-    #     plt.title('Input')
-    #     plt.subplot(2,3,2)
-    #     plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test_img_magnitude), cv2.COLOR_GRAY2RGB))
-    #     plt.title('Sobel Edge')
-    #     plt.subplot(2,3,3)
-    #     plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test_img_hough), cv2.COLOR_GRAY2RGB))
-    #     plt.gca().invert_yaxis()
-    #     plt.xlabel('rho')
-    #     plt.ylabel('theta')
-    #     plt.title('Hough Transform')
-    #     plt.subplot(2,3,4)
-    #     plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test_img_hough_filter), cv2.COLOR_GRAY2RGB))
-    #     plt.gca().invert_yaxis()
-    #     plt.xlabel('rho')
-    #     plt.ylabel('theta')
-    #     plt.title('Hough Transform Filtered')
-    #     plt.subplot(2,3,5)
-    #     plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test_img_hough_filter), cv2.COLOR_GRAY2RGB))
-    #     plt.scatter(test_centroids[:,0],test_centroids[:,1])
-    #     plt.gca().invert_yaxis()
-    #     plt.xlabel('rho')
-    #     plt.ylabel('theta')
-    #     plt.title('Cluster Centroids [K-means]')
-    #     plt.subplot(2,3,6)
-    #     plt.imshow(predicted_lines_test)
-    #     plt.title('Predicted Lines')
-
-    #     plt.figure(2)
-    #     plt.subplot(2, 3, 1)
-    #     plt.imshow(cv2.cvtColor(test2_img, cv2.COLOR_BGR2RGB))
-    #     plt.title('Input')
-    #     plt.subplot(2,3,2)
-    #     plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test2_img_magnitude), cv2.COLOR_GRAY2RGB))
-    #     plt.title('Sobel Edge')
-    #     plt.subplot(2,3,3)
-    #     plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test2_img_hough), cv2.COLOR_GRAY2RGB))
-    #     plt.gca().invert_yaxis()
-    #     plt.xlabel('rho')
-    #     plt.ylabel('theta')
-    #     plt.title('Hough Transform')
-    #     plt.subplot(2,3,4)
-    #     plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test2_img_hough_filter), cv2.COLOR_GRAY2RGB))
-    #     plt.gca().invert_yaxis()
-    #     plt.xlabel('rho')
-    #     plt.ylabel('theta')
-    #     plt.title('Hough Transform Filtered')
-    #     plt.subplot(2,3,5)
-    #     plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(test2_img_hough_filter), cv2.COLOR_GRAY2RGB))
-    #     plt.gca().invert_yaxis()
-    #     plt.scatter(test2_centroids[:,0],test2_centroids[:,1])
-    #     plt.xlabel('rho')
-    #     plt.ylabel('theta')
-    #     plt.title('Cluster Centroids [K-means]')
-    #     plt.subplot(2,3,6)
-    #     plt.imshow(predicted_lines_test2)
-    #     plt.title('Predicted Lines')
-
-    #     plt.figure(3)
-    #     plt.subplot(2, 3, 1)
-    #     plt.imshow(cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB))
-    #     plt.title('Input')
-    #     plt.subplot(2,3,2)
-    #     plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(input_img_magnitude), cv2.COLOR_GRAY2RGB))
-    #     plt.title('Sobel Edge')
-    #     plt.subplot(2,3,3)
-    #     plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(input_img_hough), cv2.COLOR_GRAY2RGB))
-    #     plt.gca().invert_yaxis()
-    #     plt.xlabel('rho')
-    #     plt.ylabel('theta')
-    #     plt.title('Hough Transform')
-    #     plt.subplot(2,3,4)
-    #     plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(input_img_hough_filter), cv2.COLOR_GRAY2RGB))
-    #     plt.gca().invert_yaxis()
-    #     plt.xlabel('rho')
-    #     plt.ylabel('theta')
-    #     plt.title('Hough Transform Filtered')
-    #     plt.subplot(2,3,5)
-    #     plt.imshow(cv2.cvtColor(cv2.convertScaleAbs(input_img_hough_filter), cv2.COLOR_GRAY2RGB))
-    #     plt.gca().invert_yaxis()
-    #     plt.scatter(input_centroids[:,0],input_centroids[:,1])
-    #     plt.xlabel('rho')
-    #     plt.ylabel('theta')
-    #     plt.title('Cluster Centroids [K-means]')
-    #     plt.subplot(2,3,6)
-    #     plt.imshow(cv2.cvtColor(predicted_lines_input, cv2.COLOR_BGR2RGB))
-    #     plt.title('Predicted Lines')
-
-    #     plt.show()
 
 """
 SSD - Sum of squared difference for motion tracking.
@@ -188,7 +89,7 @@ args:
 return:
     - motion_tracked_video: (cv2 - BGR) BGR images in a list with bounding box on tracked object
 """
-def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_thickness=2, bbox_color=(0, 0, 255), search_window=30, step_size=1):
+def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_thickness=2, bbox_color=(0, 0, 255), search_window=25, step_size=1):
     # Deepcopy original video
     object_tracked_video_SSD = copy.deepcopy(video) # TODO makes slower so maybe not use
 
@@ -200,7 +101,6 @@ def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_
                   bbox_color, bbox_thickness)
 
     # Loop through each frame in the video
-    # for frame in range(1,500):
     for frame in range(1, len(video)):
         # Get the current and previous frame
         current_frame_hsv = video_hsv[frame]
@@ -213,8 +113,6 @@ def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_
         candidate_bbox = [0, 0, 0, 0]
 
         # Search for the best candidate in the search window
-        # for y in range(bbox[1]-search_window, bbox[3]+search_window):
-            # for x in range(bbox[0]-search_window, bbox[2]+search_window):
         # NOTE Full image exhaustive search
         # for y in range(bbox_size[1], current_frame_hsv.shape[0]-bbox_size[1], step_size):
         #     for x in range(bbox_size[0], current_frame_hsv.shape[1]-bbox_size[0], step_size):
@@ -238,17 +136,16 @@ def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_
         else:
             x_max = current_frame_hsv.shape[1]-bbox_size[0]
 
-
-        # # Calculate y and x range for local search space
+        # # Calculate y and x range for local search space FROM CENTER OF OBJECT
         # if bbox_center[1]-search_window >= bbox_size[1]:
         #     y_min = bbox_center[1]-search_window
         # else:
-        #     y_min = bbox_size[1]+1
+        #     y_min = bbox_size[1]
         # if bbox_center[1]+search_window <= current_frame_hsv.shape[0]-bbox_size[1]:
         #     y_max = bbox_center[1]+search_window
         # else:
         #     y_max = current_frame_hsv.shape[0]-bbox_size[1]
-        
+
         # if bbox_center[0]-search_window >= bbox_size[0]:
         #     x_min = bbox_center[0]-search_window
         # else:
@@ -265,7 +162,6 @@ def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_
                 candidate_region = current_frame_hsv[y-bbox_size[1]:y+bbox_size[1], x-bbox_size[0]:x+bbox_size[0]]
                 # Calculate the SSD
                 SSD = np.sum(np.square(candidate_region - target_region))
-                # print(f"ssd = {SSD}")
                 # Update the minimum SSD and candidate bounding box
                 if SSD < min_SSD:
                     min_SSD = SSD
@@ -273,12 +169,11 @@ def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_
 
         # Update the bounding box
         bbox = candidate_bbox
-        bbox_center = [bbox[0]-bbox[2],bbox[1]-bbox[3]]
+        bbox_center = [bbox[0]-bbox[2], bbox[1]-bbox[3]]
         # Draw the bounding box
         cv2.rectangle(object_tracked_video_SSD[frame], (bbox[0], bbox[1]), (bbox[2], bbox[3]),
                       bbox_color, bbox_thickness)
-
-
+    
     return object_tracked_video_SSD
 
 if __name__ == '__main__':
