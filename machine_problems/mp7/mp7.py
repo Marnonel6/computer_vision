@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import os
 import copy
 from sklearn.cluster import KMeans 
+import math
 
 def main():
 
@@ -26,7 +27,7 @@ def main():
     img_files = os.listdir(directory)
     img_files.sort()
     num_images = 0
-    max_images = 10 # Maximum number of images to load
+    max_images = 500 # Maximum number of images to load
     for filename in img_files:
         if num_images <= max_images:
             if filename.endswith('.jpg') or filename.endswith('.png'):
@@ -44,8 +45,6 @@ def main():
                 video_hsv.append(resized_img_hsv)
                 num_images += 1
 
-    # Get the first frame
-    first_frame = video[0]
     # Draw a red square on the image to indicate where the face is. The start face location is hard coded.
     # NOTE: (x1,y1) is the top left corner of the square
     # NOTE: (x2,y2) is the bottom right corner of the square
@@ -53,12 +52,9 @@ def main():
     # NOTE: (width,height) is the bottom right corner of the image
     bbox_size = [45, 50]    # Number of pixels x = 90, y = 100
     bbox_center = [145, 90]   # Fist image center of face bounding box
-    # Define the top-left and bottom-right coordinates of the bounding box
-    bbox = [bbox_center[0]-bbox_size[0], bbox_center[1]-bbox_size[1], bbox_center[0]+bbox_size[0], bbox_center[1]+bbox_size[1]]  # NOTE FACE START BOX IN FIRST FRAME
-    bbox_color = (0, 0, 255) # BGR color for bounding box
-    bbox_thickness = 2
-    # Draw the bounding box on the image
-    cv2.rectangle(video[0], (bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox_color, bbox_thickness)
+
+    # Preform SSD - Sum of squared difference motion tracking
+    object_tracked_video_SSD = motion_tracking_SSD(video, video_hsv, bbox_center, step_size=5) # NOTE step_size = 1 is the most accurate
 
 
 
@@ -66,9 +62,9 @@ def main():
 
 
     while True:
-        for frame in video:
-            cv2.imshow('Video', frame)
-            if cv2.waitKey(5000) & 0xFF == ord('q'): # Display each image for 100ms
+        for frame in object_tracked_video_SSD:
+            cv2.imshow('object_tracked_video_SSD', frame)
+            if cv2.waitKey(100) & 0xFF == ord('q'): # Display each image for 100ms
                 break
         if cv2.waitKey(1000) & 0xFF == ord('q'):
             break
@@ -182,14 +178,108 @@ SSD - Sum of squared difference for motion tracking.
 args:
     - video: (cv2 - BGR) BGR images in a list
     - video_hsv: (cv2 - HSV) HSV images in a list
-    - bbox: bounding box of the target object in the first frame
-    - search_window: search window size
-    - step_size: step size for the search window
+    - bbox_size: (list -> [x/2,y/2]) Size of the bounding box in number of pixels
+    - bbox_center: (list -> [x,y]) Centre of object to track in first image
+    - bbox_thickness: (int) Thickness of bounding box
+    - bbox_color: ((B,G,R)) BGR color for bounding box
+    - search_window: (int) search window size
+    - step_size: (int) step size for the search window
+
 return:
     - motion_tracked_video: (cv2 - BGR) BGR images in a list with bounding box on tracked object
 """
-# def motion_tracking(video, video_hsv, bbox, search_window, step_size):
+def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_thickness=2, bbox_color=(0, 0, 255), search_window=30, step_size=1):
+    # Deepcopy original video
+    object_tracked_video_SSD = copy.deepcopy(video) # TODO makes slower so maybe not use
 
+    # Define the top-left and bottom-right coordinates of the bounding box
+    bbox = [bbox_center[0]-bbox_size[0], bbox_center[1]-bbox_size[1], bbox_center[0]+bbox_size[0],
+            bbox_center[1]+bbox_size[1]]
+    # Draw the bounding box NOTE FACE/OBJECT START BOX IN FIRST FRAME
+    cv2.rectangle(object_tracked_video_SSD[0], (bbox[0], bbox[1]), (bbox[2], bbox[3]),
+                  bbox_color, bbox_thickness)
+
+    # Loop through each frame in the video
+    # for frame in range(1,500):
+    for frame in range(1, len(video)):
+        # Get the current and previous frame
+        current_frame_hsv = video_hsv[frame]
+        previous_frame_hsv = video_hsv[frame-1]
+        # Get the target region in the previous frame
+        target_region = previous_frame_hsv[bbox[1]:bbox[3], bbox[0]:bbox[2]] # [y1:y2, x1:x2]
+        # Initialize the SSD
+        min_SSD = math.inf
+        # Initialize the candidate bounding box
+        candidate_bbox = [0, 0, 0, 0]
+
+        # Search for the best candidate in the search window
+        # for y in range(bbox[1]-search_window, bbox[3]+search_window):
+            # for x in range(bbox[0]-search_window, bbox[2]+search_window):
+        # NOTE Full image exhaustive search
+        # for y in range(bbox_size[1], current_frame_hsv.shape[0]-bbox_size[1], step_size):
+        #     for x in range(bbox_size[0], current_frame_hsv.shape[1]-bbox_size[0], step_size):
+        # NOTE Local search window exhaustive search
+        # Calculate search space ensuring that the bounding box is inside the image
+        if bbox[1]-search_window >= bbox_size[1]:
+            y_min = bbox[1]-search_window
+        else:
+            y_min = bbox_size[1]
+        if bbox[3]+search_window <= current_frame_hsv.shape[0]-bbox_size[1]:
+            y_max = bbox[3]+search_window
+        else:
+            y_max = current_frame_hsv.shape[0]-bbox_size[1]
+        
+        if bbox[0]-search_window >= bbox_size[0]:
+            x_min = bbox[0]-search_window
+        else:
+            x_min = bbox_size[0]
+        if bbox[2]+search_window <= current_frame_hsv.shape[1]-bbox_size[0]:
+            x_max = bbox[2]+search_window
+        else:
+            x_max = current_frame_hsv.shape[1]-bbox_size[0]
+
+
+        # # Calculate y and x range for local search space
+        # if bbox_center[1]-search_window >= bbox_size[1]:
+        #     y_min = bbox_center[1]-search_window
+        # else:
+        #     y_min = bbox_size[1]+1
+        # if bbox_center[1]+search_window <= current_frame_hsv.shape[0]-bbox_size[1]:
+        #     y_max = bbox_center[1]+search_window
+        # else:
+        #     y_max = current_frame_hsv.shape[0]-bbox_size[1]
+        
+        # if bbox_center[0]-search_window >= bbox_size[0]:
+        #     x_min = bbox_center[0]-search_window
+        # else:
+        #     x_min = bbox_size[0]
+        # if bbox_center[0]+search_window <= current_frame_hsv.shape[1]-bbox_size[0]:
+        #     x_max = bbox_center[0]+search_window
+        # else:
+        #     x_max = current_frame_hsv.shape[1]-bbox_size[0]
+
+        # Loop through the local search space
+        for y in range(y_min, y_max, step_size):
+            for x in range(x_min, x_max, step_size):
+                # Get the candidate region in the current frame
+                candidate_region = current_frame_hsv[y-bbox_size[1]:y+bbox_size[1], x-bbox_size[0]:x+bbox_size[0]]
+                # Calculate the SSD
+                SSD = np.sum(np.square(candidate_region - target_region))
+                # print(f"ssd = {SSD}")
+                # Update the minimum SSD and candidate bounding box
+                if SSD < min_SSD:
+                    min_SSD = SSD
+                    candidate_bbox = [x-bbox_size[0], y-bbox_size[1], x+bbox_size[0], y+bbox_size[1]]
+
+        # Update the bounding box
+        bbox = candidate_bbox
+        bbox_center = [bbox[0]-bbox[2],bbox[1]-bbox[3]]
+        # Draw the bounding box
+        cv2.rectangle(object_tracked_video_SSD[frame], (bbox[0], bbox[1]), (bbox[2], bbox[3]),
+                      bbox_color, bbox_thickness)
+
+
+    return object_tracked_video_SSD
 
 if __name__ == '__main__':
     main()
