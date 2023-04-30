@@ -55,12 +55,16 @@ def main():
 
     # Preform SSD - Sum of squared difference motion tracking
     # NOTE step_size = 2 & search_window = 10 is the most accurate and time efficient
-    object_tracked_video_SSD = motion_tracking_SSD(video, video_hsv, bbox_center, search_window=10, step_size=5)
+    # object_tracked_video_SSD = motion_tracking_SSD(video, video_hsv, bbox_center, search_window=10, step_size=5)
+
+    # Preform CC - Cross correlation motion tracking
+    # NOTE step_size = TODO & search_window = TODO is the most accurate and time efficient
+    object_tracked_video_CC = motion_tracking_Cross_correlation(video, video_hsv, bbox_center, search_window=1, step_size=1, bbox_color=(255, 0, 0))
 
     # Display the video
     while True:
-        for frame in object_tracked_video_SSD:
-            cv2.imshow('object_tracked_video_SSD', frame)
+        for frame in object_tracked_video_CC:
+            cv2.imshow('object_tracked_video_CC', frame)
             if cv2.waitKey(100) & 0xFF == ord('q'): # Display each image for 100ms
                 break
         if cv2.waitKey(1000) & 0xFF == ord('q'):
@@ -85,9 +89,8 @@ args:
     - bbox_color: ((B,G,R)) BGR color for bounding box
     - search_window: (int) search window size
     - step_size: (int) step size for the search window
-
 return:
-    - motion_tracked_video: (cv2 - BGR) BGR images in a list with bounding box on tracked object
+    - motion_tracked_video_SSD: (cv2 - BGR) BGR images in a list with bounding box on tracked object
 """
 def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_thickness=2, bbox_color=(0, 0, 255), search_window=25, step_size=1):
     # Deepcopy original video
@@ -175,6 +178,92 @@ def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_
                       bbox_color, bbox_thickness)
     
     return object_tracked_video_SSD
+
+"""
+CC  - Cross-Correlation for motion tracking.
+    - CC = sum(I(x,y)*T(x,y)) over x and y in a predefined bounding box size
+    - Maximize CC for prediction: - T(x,y) is the target region in the previous frame
+                                  - I(x,y) is the current frame's matching candidate
+
+args:
+    - video: (cv2 - BGR) BGR images in a list
+    - video_hsv: (cv2 - HSV) HSV images in a list
+    - bbox_size: (list -> [x/2,y/2]) Size of the bounding box in number of pixels
+    - bbox_center: (list -> [x,y]) Centre of object to track in first image
+    - bbox_thickness: (int) Thickness of bounding box
+    - bbox_color: ((B,G,R)) BGR color for bounding box
+    - search_window: (int) search window size
+    - step_size: (int) step size for the search window
+return:
+    - motion_tracked_video_CC: (cv2 - BGR) BGR images in a list with bounding box on tracked object
+"""
+def motion_tracking_Cross_correlation(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_thickness=2, bbox_color=(0, 0, 255), search_window=25, step_size=1):
+    # Deepcopy original video
+    object_tracked_video_CC = copy.deepcopy(video) # TODO makes slower so maybe not use
+
+    # Define the top-left and bottom-right coordinates of the bounding box
+    bbox = [bbox_center[0]-bbox_size[0], bbox_center[1]-bbox_size[1], bbox_center[0]+bbox_size[0],
+            bbox_center[1]+bbox_size[1]]
+    # Draw the bounding box NOTE FACE/OBJECT START BOX IN FIRST FRAME
+    cv2.rectangle(object_tracked_video_CC[0], (bbox[0], bbox[1]), (bbox[2], bbox[3]),
+                  bbox_color, bbox_thickness)
+
+    # Loop through each frame in the video
+    for frame in range(1, len(video)):
+        # Get the current and previous frame
+        current_frame_hsv = video_hsv[frame]
+        previous_frame_hsv = video_hsv[frame-1]
+        # Get the target region in the previous frame
+        target_region = previous_frame_hsv[bbox[1]:bbox[3], bbox[0]:bbox[2]] # [y1:y2, x1:x2]
+        # Initialize the CC (Cross-correlation) value 
+        max_CC = -math.inf
+        # Initialize the candidate bounding box
+        candidate_bbox = [0, 0, 0, 0]
+
+        # Search for the best candidate in the search window
+        # NOTE Full image exhaustive search
+        # for y in range(bbox_size[1], current_frame_hsv.shape[0]-bbox_size[1], step_size):
+        #     for x in range(bbox_size[0], current_frame_hsv.shape[1]-bbox_size[0], step_size):
+        # NOTE Local search window exhaustive search
+        # Calculate search space ensuring that the bounding box is inside the image
+        if bbox[1]-search_window >= bbox_size[1]:
+            y_min = bbox[1]-search_window
+        else:
+            y_min = bbox_size[1]
+        if bbox[3]+search_window <= current_frame_hsv.shape[0]-bbox_size[1]:
+            y_max = bbox[3]+search_window
+        else:
+            y_max = current_frame_hsv.shape[0]-bbox_size[1]
+        
+        if bbox[0]-search_window >= bbox_size[0]:
+            x_min = bbox[0]-search_window
+        else:
+            x_min = bbox_size[0]
+        if bbox[2]+search_window <= current_frame_hsv.shape[1]-bbox_size[0]:
+            x_max = bbox[2]+search_window
+        else:
+            x_max = current_frame_hsv.shape[1]-bbox_size[0]
+
+        # Loop through the local search space
+        for y in range(y_min, y_max, step_size):
+            for x in range(x_min, x_max, step_size):
+                # Get the candidate region in the current frame
+                candidate_region = current_frame_hsv[y-bbox_size[1]:y+bbox_size[1], x-bbox_size[0]:x+bbox_size[0]]
+                # Calculate the CC
+                CC = np.sum(candidate_region*target_region)
+                # Update the maximum CC (Cross-correlation) value and candidate bounding box
+                if CC > max_CC:
+                    max_CC = CC
+                    candidate_bbox = [x-bbox_size[0], y-bbox_size[1], x+bbox_size[0], y+bbox_size[1]]
+
+        # Update the bounding box
+        bbox = candidate_bbox
+        bbox_center = [bbox[0]-bbox[2], bbox[1]-bbox[3]]
+        # Draw the bounding box
+        cv2.rectangle(object_tracked_video_CC[frame], (bbox[0], bbox[1]), (bbox[2], bbox[3]),
+                      bbox_color, bbox_thickness)
+    
+    return object_tracked_video_CC
 
 if __name__ == '__main__':
     main()
