@@ -1,5 +1,8 @@
 """
 Template-matching based Target/Motion tracking
+    - SSD: Sum of Squared Difference
+    - CC: Cross-Correlation
+    - NCC: Normalized Cross-Correlation
 
 Author: Marthinus (Marno) Nel
 Date: 04/30/2023
@@ -7,10 +10,8 @@ Date: 04/30/2023
 
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 import copy
-from sklearn.cluster import KMeans 
 import math
 import time
 
@@ -19,8 +20,6 @@ def main():
     # NOTE Debug
     print("RUNNING!")
 
-    # Load in images as BGR
-    # test_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp6/test_images/test.bmp', cv2.IMREAD_COLOR)
     # Load all the images of the video
     video = []
     video_hsv = []
@@ -58,33 +57,90 @@ def main():
     bbox_size = [int(ROI[2]/2), int(ROI[3]/2)]                     # Number of pixels [x, y]
     bbox_center = [ROI[0] + int(ROI[2]/2), ROI[1] + int(ROI[3]/2)] # Fist image center of face bounding box
 
+    """ Preform each motion tracking algorithm separately """
     # Preform SSD - Sum of squared difference motion tracking (RED)
-    # NOTE step_size = 2 & search_window = 10 is the most accurate and time efficient
+    # NOTE step_size = 1 & search_window = 10 is the most accurate and time efficient
     object_tracked_video_SSD = motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size,
                                                    search_window=10, step_size=2, bbox_color=(0, 0, 255))
 
     # Preform CC - Cross correlation motion tracking (BLUE)
-    # NOTE step_size = TODO & search_window = TODO is the most accurate and time efficient
-    object_tracked_video_CC = motion_tracking_Cross_correlation(object_tracked_video_SSD, video_hsv,
-                                                                bbox_center, search_window=10, step_size=2,
+    # NOTE step_size = 1 & search_window = 10 is the most accurate and time efficient
+    object_tracked_video_CC = motion_tracking_Cross_correlation(video, video_hsv, bbox_center,
+                                                                bbox_size, search_window=10, step_size=2,
                                                                 bbox_color=(255, 0, 0))
 
     # Preform NCC - Normalized Cross-correlation motion tracking (GREEN)
-    # NOTE step_size = TODO & search_window = TODO is the most accurate and time efficient
-    object_tracked_video_NCC = motion_tracking_NCC(object_tracked_video_CC, video_hsv, bbox_center,
-                                                   search_window=10, step_size=5, bbox_color=(0, 255, 0))
+    # NOTE step_size = 1 & search_window = 10 is the most accurate and time efficient
+    object_tracked_video_NCC = motion_tracking_NCC(video, video_hsv, bbox_center, bbox_size,
+                                                   search_window=10, step_size=2, bbox_color=(0, 255, 0))
+
+    """ Display all motion tracking algorithms in one video """
+        # Preform SSD - Sum of squared difference motion tracking (RED)
+    # NOTE step_size = 1 & search_window = 10 is the most accurate and time efficient
+    object_tracked_video_SSD_CC_NCC = motion_tracking_SSD(object_tracked_video_NCC, video_hsv, bbox_center, bbox_size,
+                                                   search_window=10, step_size=2, bbox_color=(0, 0, 255))
+
+    # Preform CC - Cross correlation motion tracking (BLUE)
+    # NOTE step_size = 1 & search_window = 10 is the most accurate and time efficient
+    object_tracked_video_SSD_CC_NCC = motion_tracking_Cross_correlation(object_tracked_video_SSD_CC_NCC, video_hsv, bbox_center,
+                                                                bbox_size, search_window=10, step_size=2,
+                                                                bbox_color=(255, 0, 0))
+
+    # Save result videos:
+    save_result_videos = True
+    if save_result_videos:
+        fps = 10
+
+        # VideoWriter object
+        Video_obj = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter('object_tracked_video_SSD.mp4', Video_obj, fps, (object_tracked_video_SSD[0].shape[1], object_tracked_video_SSD[0].shape[0]))  # Filename, Codec, FPS, Frame size
+        # Iterate over the photos
+        for frame in object_tracked_video_SSD:
+            out.write(frame)
+        # Release the VideoWriter object
+        out.release()
+
+        # VideoWriter object
+        Video_obj = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter('object_tracked_video_CC.mp4', Video_obj, fps,
+                              (object_tracked_video_CC[0].shape[1], object_tracked_video_CC[0].shape[0]))  # Filename, Codec, FPS, Frame size
+        # Iterate over the photos
+        for frame in object_tracked_video_CC:
+            out.write(frame)
+        # Release the VideoWriter object
+        out.release()
+
+        # VideoWriter object
+        Video_obj = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter('object_tracked_video_NCC.mp4', Video_obj, fps,
+                              (object_tracked_video_NCC[0].shape[1], object_tracked_video_NCC[0].shape[0]))  # Filename, Codec, FPS, Frame size
+        # Iterate over the photos
+        for frame in object_tracked_video_NCC:
+            out.write(frame)
+        # Release the VideoWriter object
+        out.release()
+
+        # VideoWriter object
+        Video_obj = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter('object_tracked_video_SSD_CC_NCC.mp4', Video_obj, fps,
+                              (object_tracked_video_SSD_CC_NCC[0].shape[1], object_tracked_video_SSD_CC_NCC[0].shape[0]))  # Filename, Codec, FPS, Frame size
+        # Iterate over the photos
+        for frame in object_tracked_video_SSD_CC_NCC:
+            out.write(frame)
+        # Release the VideoWriter object
+        out.release()
+
+    # NOTE Debug
+    print("FINISHED!")
 
     # Display the video
     while True:
-        for frame in object_tracked_video_NCC:
-            cv2.imshow('object_tracked_video_CC', frame)
+        for frame in object_tracked_video_SSD_CC_NCC:
+            cv2.imshow('object_tracked_video_SSD_CC_NCC', frame)
             if cv2.waitKey(100) & 0xFF == ord('q'): # Display each image for 100ms
                 break
         if cv2.waitKey(1000) & 0xFF == ord('q'):
             break
-
-    # NOTE Debug
-    print("FINISHED!")
 
 """
 SSD - Sum of squared difference for motion tracking.
@@ -105,7 +161,8 @@ args:
 return:
     - motion_tracked_video_SSD: (cv2 - BGR) BGR images in a list with bounding box on tracked object
 """
-def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_thickness=2, bbox_color=(0, 0, 255), search_window=25, step_size=1):
+def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_thickness=2,
+                        bbox_color=(0, 0, 255), search_window=25, step_size=1):
     # Algorithm start time
     start_time = time.time()
 
@@ -123,8 +180,9 @@ def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_
 
     # Loop through each frame in the video
     for frame in range(1, len(video)):
-        # NOTE print current frame number
-        print(f"\r Sum of squared difference: Frame [{frame+1}/500] Time passed:{time.time() - start_time:.2f} s", end="")
+        # NOTE Algorithm Status
+        time_passed = time.time() - start_time
+        print(f"\r Sum of squared difference: Frame [{frame+1}/500] Time:{time.time() - start_time:.2f}/{(((500 - frame+1)/frame+1) * time_passed):.2f} s", end="")
         # Get the current and previous frame
         current_frame_hsv = video_hsv[frame]
         previous_frame_hsv = video_hsv[frame-1]
@@ -158,25 +216,6 @@ def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_
             x_max = bbox[2]+search_window
         else:
             x_max = current_frame_hsv.shape[1]-bbox_size[0]
-
-        # # Calculate y and x range for local search space FROM CENTER OF OBJECT
-        # if bbox_center[1]-search_window >= bbox_size[1]:
-        #     y_min = bbox_center[1]-search_window
-        # else:
-        #     y_min = bbox_size[1]
-        # if bbox_center[1]+search_window <= current_frame_hsv.shape[0]-bbox_size[1]:
-        #     y_max = bbox_center[1]+search_window
-        # else:
-        #     y_max = current_frame_hsv.shape[0]-bbox_size[1]
-
-        # if bbox_center[0]-search_window >= bbox_size[0]:
-        #     x_min = bbox_center[0]-search_window
-        # else:
-        #     x_min = bbox_size[0]
-        # if bbox_center[0]+search_window <= current_frame_hsv.shape[1]-bbox_size[0]:
-        #     x_max = bbox_center[0]+search_window
-        # else:
-        #     x_max = current_frame_hsv.shape[1]-bbox_size[0]
 
         # Loop through the local search space
         for y in range(y_min, y_max, step_size):
@@ -219,7 +258,8 @@ args:
 return:
     - motion_tracked_video_CC: (cv2 - BGR) BGR images in a list with bounding box on tracked object
 """
-def motion_tracking_Cross_correlation(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_thickness=2, bbox_color=(0, 0, 255), search_window=25, step_size=1):
+def motion_tracking_Cross_correlation(video, video_hsv, bbox_center, bbox_size=[45, 50], 
+                                      bbox_thickness=2, bbox_color=(0, 0, 255), search_window=25, step_size=1):
     # Algorithm start time
     start_time = time.time()
 
@@ -235,8 +275,9 @@ def motion_tracking_Cross_correlation(video, video_hsv, bbox_center, bbox_size=[
 
     # Loop through each frame in the video
     for frame in range(1, len(video)):
-        # NOTE print current frame number
-        print(f"\r Cross-Correlation: Frame [{frame+1}/500] Time passed:{time.time() - start_time:.2f} s", end="")
+        # NOTE Algorithm Status
+        time_passed = time.time() - start_time
+        print(f"\r Cross-Correlation: Frame [{frame+1}/500] Time:{time.time() - start_time:.2f}/{(((500 - frame+1)/frame+1) * time_passed):.2f} s", end="")
 
         # Get the current and previous frame
         current_frame_hsv = video_hsv[frame]
@@ -297,9 +338,13 @@ def motion_tracking_Cross_correlation(video, video_hsv, bbox_center, bbox_size=[
 
 """
 NCC  - Normalized Cross-Correlation for motion tracking.
-     FIXME !!! - NCC = sum(T(x,y) * I(x,y)) / sqrt(sum(T(x,y)^2) * sum(I(x,y)^2)) over x and y in a predefined bounding box size
      - Maximize NCC for prediction: - T(x,y) is the target region in the previous frame
                                     - I(x,y) is the current frame's matching candidate
+     - NCC = A / B over x and y in a predefined bounding box size
+        - A = sum((I(x,y) - I_avg) * (T(x,y) - T_avg))
+        - B = sqrt(sum((I(x,y) - I_avg)^2) * sum((T(x,y) - T_avg)^2))
+        - I_avg = mean(I(x,y), axis=(0, 1))
+        - T_avg = mean(T(x,y), axis=(0, 1))
 
 args:
     - video: (cv2 - BGR) BGR images in a list
@@ -313,7 +358,8 @@ args:
 return:
     - motion_tracked_video_NCC: (cv2 - BGR) BGR images in a list with bounding box on tracked object
 """
-def motion_tracking_NCC(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_thickness=2, bbox_color=(0, 0, 255), search_window=25, step_size=1):
+def motion_tracking_NCC(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_thickness=2,
+                        bbox_color=(0, 0, 255), search_window=25, step_size=1):
     # Algorithm start time
     start_time = time.time()
 
@@ -329,8 +375,9 @@ def motion_tracking_NCC(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_
 
     # Loop through each frame in the video
     for frame in range(1, len(video)):
-        # NOTE print current frame number
-        print(f"\r Normalized Cross-Correlation: Frame [{frame+1}/500] Time passed:{time.time() - start_time:.2f} s", end="")
+        # NOTE Algorithm Status
+        time_passed = time.time() - start_time
+        print(f"\r Normalized Cross-Correlation: Frame [{frame+1}/500] Time:{time.time() - start_time:.2f}/{(((500 - frame+1)/frame+1) * time_passed):.2f} s", end="")
 
         # Get the current and previous frame
         current_frame_hsv = video_hsv[frame]
@@ -395,8 +442,6 @@ def motion_tracking_NCC(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_
     print(f"\n")
 
     return object_tracked_video_NCC
-
-
 
 if __name__ == '__main__':
     main()
