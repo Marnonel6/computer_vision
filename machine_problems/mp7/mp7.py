@@ -12,6 +12,7 @@ import os
 import copy
 from sklearn.cluster import KMeans 
 import math
+import time
 
 def main():
 
@@ -59,11 +60,15 @@ def main():
 
     # Preform CC - Cross correlation motion tracking
     # NOTE step_size = TODO & search_window = TODO is the most accurate and time efficient
-    object_tracked_video_CC = motion_tracking_Cross_correlation(video, video_hsv, bbox_center, search_window=1, step_size=1, bbox_color=(255, 0, 0))
+    # object_tracked_video_CC = motion_tracking_Cross_correlation(video, video_hsv, bbox_center, search_window=10, step_size=1, bbox_color=(255, 0, 0))
+
+    # Preform NCC - Normalized Cross-correlation motion tracking
+    # NOTE step_size = TODO & search_window = TODO is the most accurate and time efficient
+    object_tracked_video_NCC = motion_tracking_NCC(video, video_hsv, bbox_center, search_window=10, step_size=5, bbox_color=(0, 255, 0))
 
     # Display the video
     while True:
-        for frame in object_tracked_video_CC:
+        for frame in object_tracked_video_NCC:
             cv2.imshow('object_tracked_video_CC', frame)
             if cv2.waitKey(100) & 0xFF == ord('q'): # Display each image for 100ms
                 break
@@ -265,45 +270,106 @@ def motion_tracking_Cross_correlation(video, video_hsv, bbox_center, bbox_size=[
     
     return object_tracked_video_CC
 
+"""
+NCC  - Normalized Cross-Correlation for motion tracking.
+     FIXME !!! - NCC = sum(T(x,y) * I(x,y)) / sqrt(sum(T(x,y)^2) * sum(I(x,y)^2)) over x and y in a predefined bounding box size
+     - Maximize NCC for prediction: - T(x,y) is the target region in the previous frame
+                                    - I(x,y) is the current frame's matching candidate
+
+args:
+    - video: (cv2 - BGR) BGR images in a list
+    - video_hsv: (cv2 - HSV) HSV images in a list
+    - bbox_size: (list -> [x/2,y/2]) Size of the bounding box in number of pixels
+    - bbox_center: (list -> [x,y]) Centre of object to track in first image
+    - bbox_thickness: (int) Thickness of bounding box
+    - bbox_color: ((B,G,R)) BGR color for bounding box
+    - search_window: (int) search window size
+    - step_size: (int) step size for the search window
+return:
+    - motion_tracked_video_NCC: (cv2 - BGR) BGR images in a list with bounding box on tracked object
+"""
+def motion_tracking_NCC(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_thickness=2, bbox_color=(0, 0, 255), search_window=25, step_size=1):
+    # Algorithm start time
+    start_time = time.time()
+
+    # Deepcopy original video
+    object_tracked_video_NCC = copy.deepcopy(video) # TODO makes slower so maybe not use
+
+    # Define the top-left and bottom-right coordinates of the bounding box
+    bbox = [bbox_center[0]-bbox_size[0], bbox_center[1]-bbox_size[1], bbox_center[0]+bbox_size[0],
+            bbox_center[1]+bbox_size[1]]
+    # Draw the bounding box NOTE FACE/OBJECT START BOX IN FIRST FRAME
+    cv2.rectangle(object_tracked_video_NCC[0], (bbox[0], bbox[1]), (bbox[2], bbox[3]),
+                  bbox_color, bbox_thickness)
+
+    # Loop through each frame in the video
+    for frame in range(1, len(video)):
+        # NOTE print current frame number
+        print(f"\r Normalized Cross-Correlation: Frame [{frame+1}/500] Time passed:{time.time() - start_time:.2f} s", end="")
+
+        # Get the current and previous frame
+        current_frame_hsv = video_hsv[frame]
+        previous_frame_hsv = video_hsv[frame-1]
+        # Get the target region in the previous frame
+        target_region = previous_frame_hsv[bbox[1]:bbox[3], bbox[0]:bbox[2]] # [y1:y2, x1:x2]
+        # Initialize the NCC
+        max_NCC = -math.inf
+        # Initialize the candidate bounding box
+        candidate_bbox = [0, 0, 0, 0]
+
+        # Search for the best candidate in the search window
+        # NOTE Full image exhaustive search
+        # for y in range(bbox_size[1], current_frame_hsv.shape[0]-bbox_size[1], step_size):
+        #     for x in range(bbox_size[0], current_frame_hsv.shape[1]-bbox_size[0], step_size):
+        # NOTE Local search window exhaustive search
+        # Calculate search space ensuring that the bounding box is inside the image
+        if bbox[1]-search_window >= bbox_size[1]:
+            y_min = bbox[1]-search_window
+        else:
+            y_min = bbox_size[1]
+        if bbox[3]+search_window <= current_frame_hsv.shape[0]-bbox_size[1]:
+            y_max = bbox[3]+search_window
+        else:
+            y_max = current_frame_hsv.shape[0]-bbox_size[1]
+        
+        if bbox[0]-search_window >= bbox_size[0]:
+            x_min = bbox[0]-search_window
+        else:
+            x_min = bbox_size[0]
+        if bbox[2]+search_window <= current_frame_hsv.shape[1]-bbox_size[0]:
+            x_max = bbox[2]+search_window
+        else:
+            x_max = current_frame_hsv.shape[1]-bbox_size[0]
+
+        # Loop through the local search space
+        for y in range(y_min, y_max, step_size):
+            for x in range(x_min, x_max, step_size):
+                # Get the candidate region in the current frame
+                candidate_region = current_frame_hsv[y-bbox_size[1]:y+bbox_size[1], x-bbox_size[0]:x+bbox_size[0]]
+                # NOTE: Calculate the NCC
+                # Calculate the average value of the 3 axis in candidate_region
+                I_avg = np.mean(candidate_region, axis=(0, 1))
+                # Calculate the average value of the 3 axis in target_region
+                T_avg = np.mean(target_region, axis=(0, 1))
+                # Calculate NCC
+                numerator = np.sum((candidate_region-I_avg)*(target_region-T_avg))
+                denominator = np.sqrt(np.sum(np.square(candidate_region - I_avg))*np.sum(np.square(target_region - T_avg)))
+                NCC = numerator/denominator
+                # Update the minimum NCC and candidate bounding box
+                if NCC > max_NCC:
+                    max_NCC = NCC
+                    candidate_bbox = [x-bbox_size[0], y-bbox_size[1], x+bbox_size[0], y+bbox_size[1]]
+
+        # Update the bounding box
+        bbox = candidate_bbox
+        bbox_center = [bbox[0]-bbox[2], bbox[1]-bbox[3]]
+        # Draw the bounding box
+        cv2.rectangle(object_tracked_video_NCC[frame], (bbox[0], bbox[1]), (bbox[2], bbox[3]),
+                      bbox_color, bbox_thickness)
+    
+    return object_tracked_video_NCC
+
+
+
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-    # # Initialize the bounding box
-    # bbox = np.array(bbox)
-    # bbox = bbox.astype(int)
-    # bbox = bbox.reshape(1,4)
-    # motion_tracked_video = []
-    # for i in range(len(video)):
-    #     # Get the current frame
-    #     frame = video[i]
-    #     frame_hsv = video_hsv[i]
-    #     # Get the target region in the previous frame
-    #     target_region = frame_hsv[bbox[0,1]:bbox[0,1]+bbox[0,3], bbox[0,0]:bbox[0,0]+bbox[0,2], 0]
-    #     # Initialize the SSD
-    #     ssd = np.inf
-    #     # Initialize the candidate bounding box
-    #     candidate_bbox = bbox
-
-    #     # Search for the best candidate in the search window
-    #     for y in range(bbox[0,1]-search_window, bbox[0,1]+search_window, step_size):
-    #         for x in range(bbox[0,0]-search_window, bbox[0,0]+search_window, step_size):
-    #             # Get the candidate region
-    #             candidate_region = frame_hsv[y:y+bbox[0,3], x:x+bbox[0,2], 0]
-    #             # Calculate the SSD
-    #             ssd_candidate = np.sum(np.square(target_region - candidate_region))
-    #             # Update the best candidate
-    #             if ssd_candidate < ssd:
-    #                 ssd = ssd_candidate
-    #                 candidate_bbox = np.array([x, y, bbox[0,2], bbox[0,3]])
-    #     # Update the bounding box
-    #     bbox = candidate_bbox
-    #     # Draw the bounding box
-    #     cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[0]+bbox[2], bbox[1]+bbox[3]), (0,255,0), 2)
-    #     # Append the frame to the motion tracked video
-    #     motion_tracked_video.append(frame)
-    # return motion_tracked_video
