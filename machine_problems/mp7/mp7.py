@@ -53,28 +53,30 @@ def main():
     # NOTE: (width,height) is the bottom right corner of the image
     # bbox_size = [45, 50]    # Number of pixels x = 90, y = 100
     # bbox_center = [145, 90]   # Fist image center of face bounding box
+    # NOTE or use GUI to select ROI - Region of interest and then press enter
+    ROI = cv2.selectROI(video[0], fromCenter=False) # returns [x1, y1, width, height] - Left top (x1,y1)
+    bbox_size = [int(ROI[2]/2), int(ROI[3]/2)]                     # Number of pixels [x, y]
+    bbox_center = [ROI[0] + int(ROI[2]/2), ROI[1] + int(ROI[3]/2)] # Fist image center of face bounding box
 
-    # Select ROI - Region of interest
-    ROI = cv2.selectROI(video[0], fromCenter=False) # [x1, y1, width, height]
-    bbox_size = [int(ROI[2]/2), int(ROI[3]/2)]    # Number of pixels x = 90, y = 100
-    bbox_center = [ROI[0] + int(ROI[2]/2), ROI[1] + int(ROI[3]/2)]   # Fist image center of face bounding box
-    print(f"ROI = {ROI} bbox_size = {bbox_size} bbox_center = {bbox_center}")
-
-    # Preform SSD - Sum of squared difference motion tracking
+    # Preform SSD - Sum of squared difference motion tracking (RED)
     # NOTE step_size = 2 & search_window = 10 is the most accurate and time efficient
-    object_tracked_video_SSD = motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size, search_window=10, step_size=5)
+    object_tracked_video_SSD = motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size,
+                                                   search_window=10, step_size=2, bbox_color=(0, 0, 255))
 
-    # Preform CC - Cross correlation motion tracking
+    # Preform CC - Cross correlation motion tracking (BLUE)
     # NOTE step_size = TODO & search_window = TODO is the most accurate and time efficient
-    # object_tracked_video_CC = motion_tracking_Cross_correlation(video, video_hsv, bbox_center, search_window=10, step_size=1, bbox_color=(255, 0, 0))
+    object_tracked_video_CC = motion_tracking_Cross_correlation(object_tracked_video_SSD, video_hsv,
+                                                                bbox_center, search_window=10, step_size=2,
+                                                                bbox_color=(255, 0, 0))
 
-    # Preform NCC - Normalized Cross-correlation motion tracking
+    # Preform NCC - Normalized Cross-correlation motion tracking (GREEN)
     # NOTE step_size = TODO & search_window = TODO is the most accurate and time efficient
-    # object_tracked_video_NCC = motion_tracking_NCC(video, video_hsv, bbox_center, search_window=10, step_size=5, bbox_color=(0, 255, 0))
+    object_tracked_video_NCC = motion_tracking_NCC(object_tracked_video_CC, video_hsv, bbox_center,
+                                                   search_window=10, step_size=5, bbox_color=(0, 255, 0))
 
     # Display the video
     while True:
-        for frame in object_tracked_video_SSD:
+        for frame in object_tracked_video_NCC:
             cv2.imshow('object_tracked_video_CC', frame)
             if cv2.waitKey(100) & 0xFF == ord('q'): # Display each image for 100ms
                 break
@@ -106,6 +108,8 @@ return:
 def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_thickness=2, bbox_color=(0, 0, 255), search_window=25, step_size=1):
     # Algorithm start time
     start_time = time.time()
+
+    print("\n")
 
     # Deepcopy original video
     object_tracked_video_SSD = copy.deepcopy(video) # TODO makes slower so maybe not use
@@ -192,7 +196,9 @@ def motion_tracking_SSD(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_
         # Draw the bounding box
         cv2.rectangle(object_tracked_video_SSD[frame], (bbox[0], bbox[1]), (bbox[2], bbox[3]),
                       bbox_color, bbox_thickness)
-    
+
+    print(f"\n")
+
     return object_tracked_video_SSD
 
 """
@@ -230,7 +236,7 @@ def motion_tracking_Cross_correlation(video, video_hsv, bbox_center, bbox_size=[
     # Loop through each frame in the video
     for frame in range(1, len(video)):
         # NOTE print current frame number
-        print(f"\r Sum of squared difference: Frame [{frame+1}/500] Time passed:{time.time() - start_time:.2f} s", end="")
+        print(f"\r Cross-Correlation: Frame [{frame+1}/500] Time passed:{time.time() - start_time:.2f} s", end="")
 
         # Get the current and previous frame
         current_frame_hsv = video_hsv[frame]
@@ -284,7 +290,9 @@ def motion_tracking_Cross_correlation(video, video_hsv, bbox_center, bbox_size=[
         # Draw the bounding box
         cv2.rectangle(object_tracked_video_CC[frame], (bbox[0], bbox[1]), (bbox[2], bbox[3]),
                       bbox_color, bbox_thickness)
-    
+
+    print(f"\n")
+
     return object_tracked_video_CC
 
 """
@@ -383,7 +391,9 @@ def motion_tracking_NCC(video, video_hsv, bbox_center, bbox_size=[45, 50], bbox_
         # Draw the bounding box
         cv2.rectangle(object_tracked_video_NCC[frame], (bbox[0], bbox[1]), (bbox[2], bbox[3]),
                       bbox_color, bbox_thickness)
-    
+
+    print(f"\n")
+
     return object_tracked_video_NCC
 
 
