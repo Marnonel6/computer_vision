@@ -21,23 +21,33 @@ def main():
     # test_img = cv2.imread('/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp6/test_images/test.bmp', cv2.IMREAD_COLOR)
     # Load all the images of the video
     video = []
+    video_hsv = []
     directory = '/home/marno/Classes/Spring23/CV/computer_vision/machine_problems/mp7/test_images/video_images_girl/'
     img_files = os.listdir(directory)
     img_files.sort()
+    num_images = 0
+    max_images = 10 # Maximum number of images to load
     for filename in img_files:
-        if filename.endswith('.jpg') or filename.endswith('.png'):
-            filepath = os.path.join(directory, filename)
-            image = cv2.imread(filepath)
-            # Get current dimensions of image
-            height, width = image.shape[:2]
-            # Double the size of the image
-            resized_img = cv2.resize(image, (2*width, 2*height))
-            video.append(resized_img)
+        if num_images <= max_images:
+            if filename.endswith('.jpg') or filename.endswith('.png'):
+                filepath = os.path.join(directory, filename)
+                image = cv2.imread(filepath, cv2.IMREAD_COLOR)
+                # Convert BGR to HSV
+                image_HSV = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+                # Get current dimensions of image
+                height, width = image.shape[:2]
+                # Double the size of the image
+                resized_img = cv2.resize(image, (2*width, 2*height))
+                resized_img_hsv = cv2.resize(image_HSV, (2*width, 2*height))
+                # Add to video
+                video.append(resized_img)
+                video_hsv.append(resized_img_hsv)
+                num_images += 1
 
     while True:
         for frame in video:
             cv2.imshow('Video', frame)
-            if cv2.waitKey(100) & 0xFF == ord('q'): # Display each image for 50ms
+            if cv2.waitKey(100) & 0xFF == ord('q'): # Display each image for 100ms
                 break
         if cv2.waitKey(1000) & 0xFF == ord('q'):
             break
