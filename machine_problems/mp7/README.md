@@ -4,7 +4,11 @@ Template-matching based Target Tracking is a computer vision technique used for 
 
 Template-matching based Target Tracking is widely used in computer vision applications such as surveillance, autonomous driving, and robotics. However, it has limitations such as being sensitive to variations in lighting and background, and requiring a good initial template for accurate tracking.
 
-https://user-images.githubusercontent.com/60977336/235384655-f67c4c86-da23-4f54-97da-b8e1b49337f4.mp4
+<video width="320" height="240" controls>
+  <source src="https://user-images.githubusercontent.com/60977336/235384655-f67c4c86-da23-4f54-97da-b8e1b49337f4.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 
 The initial template/target (region of interest) is selected in the first frame using `cv2.selectROI()` as shown in the video below. 
 
