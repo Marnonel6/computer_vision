@@ -72,7 +72,7 @@ def main():
     # Preform NCC - Normalized Cross-correlation motion tracking (GREEN)
     # NOTE step_size = 1 & search_window = 10 is the most accurate and time efficient
     object_tracked_video_NCC = motion_tracking_NCC(video, video_hsv, bbox_center, bbox_size,
-                                                   search_window=10, step_size=2, bbox_color=(0, 255, 0))
+                                                   search_window=10, step_size=5, bbox_color=(0, 255, 0))
 
     """ Display all motion tracking algorithms in one video """
         # Preform SSD - Sum of squared difference motion tracking (RED)
