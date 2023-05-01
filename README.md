@@ -17,4 +17,8 @@ Computer vision projects. Most of the algorithms are programmed from scratch.
 - [(mp5) Canny Edge Detector From Scratch](https://github.com/Marnonel6/computer_vision/tree/main/machine_problems/mp5)
 - [(mp6) Hough Transform](https://github.com/Marnonel6/computer_vision/tree/main/machine_problems/mp6)
     * Hough Transform algorithm for straight line detection
+- [(mp7) Template-matching based Target/Motion tracking](https://github.com/Marnonel6/computer_vision/tree/main/machine_problems/mp7)
+    * SSD (Sum of Squared Difference)
+    * CC (Cross-Correlation)
+    * NCC (Normalized Cross-Correlation)
 
