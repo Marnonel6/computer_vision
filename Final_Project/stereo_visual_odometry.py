@@ -22,19 +22,19 @@ class VisualOdometry():
 
         # Camera intrinsic parameters and Projection matrix
         self.P_l, self.P_r, self.K_l, self.K_r = self.import_calibration_parameters(self.dataset_path + "/sequences/" + self.dataset)
-        print(f"P_l = {self.P_l}")
-        print(f"P_r = {self.P_r}")
-        print(f"K_l = {self.K_l}")
-        print(f"K_r = {self.K_r}")
+        # print(f"P_l = {self.P_l}")
+        # print(f"P_r = {self.P_r}")
+        # print(f"K_l = {self.K_l}")
+        # print(f"K_r = {self.K_r}")
 
         # Ground truth poses
         self.GT_poses = self.import_ground_truth(self.dataset_path + "/poses/" + self.dataset + ".txt")
         # print(f"GT_poses = {self.GT_poses}")
 
         # Load stereo images into a list
-        self.image_l, self.image_r = self.import_images(self.dataset_path + "/sequences/" + self.dataset)
-        # print(f"image_l = {self.image_l}")
-        # print(f"image_r = {self.image_r}")
+        self.image_l_list, self.image_r_list = self.import_images(self.dataset_path + "/sequences/" + self.dataset)
+        # print(f"image_l = {self.image_l_list}")
+        # print(f"image_r = {self.image_r_list}")
 
     def import_images(self, image_dir_path):
         """
@@ -104,6 +104,35 @@ class VisualOdometry():
 
         return ground_truth
 
+    def feature_detection(self, detector, image):
+        """
+        Feature detection/extraction
+
+        Parameters
+        ----------
+            detector (str): The type of feature detector to use
+            image (np.array): The image to detect features in
+
+        Returns
+        -------
+            keypoints (list): List of keypoints
+            descriptors (list): List of descriptors
+        """
+        if detector == 'orb':
+            orb = cv2.ORB_create()
+            # Detects keypoints and computes corresponding feature descriptors and returns a list for each.
+            keypoints, descriptors = orb.detectAndCompute(image, mask=None)
+        elif detector == 'sift':
+            sift = cv2.SIFT_create()
+            keypoints, descriptors = sift.detectAndCompute(image, mask=None)
+        elif detector == 'surf':
+            surf = cv2.SURF_create()
+            keypoints, descriptors = surf.detectAndCompute(image, mask=None)
+        else:
+            raise Exception("Invalid detector type")
+
+        return keypoints, descriptors
+
 def main():
     """
     main function
@@ -111,10 +140,38 @@ def main():
     SVO_dataset = VisualOdometry(dataset = "07")
 
     # Play images of the trip
-    vs.play_trip(SVO_dataset.image_l, SVO_dataset.image_r)
+    vs.play_trip(SVO_dataset.image_l_list, SVO_dataset.image_r_list)
 
-    # traj = visual_odometry(handler, detector='sift', matching='BF', filter_match_distance=0.45,
-    #                         stereo_matcher='sgbm', mask=None)
+    """ Preform visual odometry on the dataset """
+
+    # Initialize the trajectory
+    estimated_traj = np.zeros((len(SVO_dataset.image_l_list), 3, 4))
+    T_current = np.eye(4) # Start at identity matrix
+    estimated_traj[0] = T_current[:3, :]
+
+    # Setup visual odometry images
+    image_l_curr = SVO_dataset.image_l_list[0]
+    image_r_curr = SVO_dataset.image_r_list[0]
+
+    # for i in range(len(SVO_dataset.image_l_list) - 1):
+    for i in range(1):
+        # Previous image
+        image_l_prev = image_l_curr
+        image_r_prev = image_r_curr
+        # Current image
+        image_l_curr = SVO_dataset.image_l_list[i + 1]
+        image_r_curr = SVO_dataset.image_r_list[i + 1]
+
+        # Feature detection/extraction
+        keypoints_l_prev, descriptors_l_prev = SVO_dataset.feature_detection("orb", image_l_prev)
+        keypoints_r_prev, descriptors_r_prev = SVO_dataset.feature_detection("orb", image_r_prev)
+        keypoints_l_curr, descriptors_l_curr = SVO_dataset.feature_detection("orb", image_l_curr)
+        keypoints_r_curr, descriptors_r_curr = SVO_dataset.feature_detection("orb", image_r_curr)
+        # print(f"keypoints_l_prev = {keypoints_l_prev}")
+        # print(f"descriptors_l_prev = {descriptors_l_prev}")
+
+        # Feature matching
+        
 
 if __name__ == "__main__":
     main()
