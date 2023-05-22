@@ -21,10 +21,10 @@ class VisualOdometry():
 
         # Camera intrinsic parameters and Projection matrix
         self.P_l, self.P_r, self.K_l, self.K_r = self.import_calibration_parameters(self.dataset_path + "/sequences/" + self.dataset)
-        # print(f"P_l = {self.P_l}")
-        # print(f"P_r = {self.P_r}")
-        # print(f"K_l = {self.K_l}")
-        # print(f"K_r = {self.K_r}")
+        print(f"P_l = {self.P_l}")
+        print(f"P_r = {self.P_r}")
+        print(f"K_l = {self.K_l}")
+        print(f"K_r = {self.K_r}")
 
         # Ground truth poses
         self.GT_poses = self.import_ground_truth(self.dataset_path + "/poses/" + self.dataset + ".txt")
@@ -81,8 +81,8 @@ class VisualOdometry():
         P_l = np.array(calib_params.loc['P0:']).reshape((3,4))
         P_r = np.array(calib_params.loc['P1:']).reshape((3,4))
         # Camera intrinsic parameters
-        K_l = P_l[0:3, 0:3]
-        K_r = P_r[0:3, 0:3]
+        K_l = cv2.decomposeProjectionMatrix(P_l)[0]
+        K_r = cv2.decomposeProjectionMatrix(P_r)[0]
 
         return P_l, P_r, K_l, K_r
 
