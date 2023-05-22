@@ -125,19 +125,57 @@ class VisualOdometry():
         elif detector == 'sift':
             sift = cv2.SIFT_create()
             keypoints, descriptors = sift.detectAndCompute(image, mask=None)
-        elif detector == 'surf':
-            surf = cv2.SURF_create()
-            keypoints, descriptors = surf.detectAndCompute(image, mask=None)
+        # elif detector == 'surf':
+        #     surf = cv2.SURF_create()
+        #     keypoints, descriptors = surf.detectAndCompute(image, mask=None)
         else:
             raise Exception("Invalid detector type")
 
         return keypoints, descriptors
+    
+    def feature_matching(self, detector, descriptors_l_prev, descriptors_l_curr):
+        """
+        Feature matching
+
+        Parameters
+        ----------
+            detector (str): The detector implies which matcher to use
+            descriptors_l_prev (list): List of descriptors from previous (t-1) left image
+            descriptors_l_curr (list): List of descriptors from current (t) left image
+
+        Returns
+        -------
+            matches (list): List of matches
+        """
+        if detector == 'orb':
+            bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        elif detector == 'sift':
+            bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+        # elif detector == 'flann':
+        #     # FLANN parameters
+        #     FLANN_INDEX_LSH = 6
+        #     index_params = dict(algorithm=FLANN_INDEX_LSH,
+        #                         table_number=6,
+        #                         key_size=12,
+        #                         multi_probe_level=1)
+        #     search_params = dict(checks=50)
+        #     flann = cv2.FlannBasedMatcher(index_params, search_params)
+        #     matches = flann.knnMatch(descriptors_l, descriptors_r, k=2)
+        else:
+            raise Exception("Invalid matcher type")
+
+        matches = bf.match(descriptors_l_prev, descriptors_l_curr)
+
+        return matches
 
 def main():
     """
     main function
     """
     SVO_dataset = VisualOdometry(dataset = "07")
+
+    # Choose feature detector type
+    detector = "orb"
 
     # Play images of the trip
     vs.play_trip(SVO_dataset.image_l_list, SVO_dataset.image_r_list)
@@ -163,15 +201,17 @@ def main():
         image_r_curr = SVO_dataset.image_r_list[i + 1]
 
         # Feature detection/extraction
-        keypoints_l_prev, descriptors_l_prev = SVO_dataset.feature_detection("orb", image_l_prev)
-        keypoints_r_prev, descriptors_r_prev = SVO_dataset.feature_detection("orb", image_r_prev)
-        keypoints_l_curr, descriptors_l_curr = SVO_dataset.feature_detection("orb", image_l_curr)
-        keypoints_r_curr, descriptors_r_curr = SVO_dataset.feature_detection("orb", image_r_curr)
+        keypoints_l_prev, descriptors_l_prev = SVO_dataset.feature_detection(detector, image_l_prev)
+        keypoints_r_prev, descriptors_r_prev = SVO_dataset.feature_detection(detector, image_r_prev)
+        keypoints_l_curr, descriptors_l_curr = SVO_dataset.feature_detection(detector, image_l_curr)
+        keypoints_r_curr, descriptors_r_curr = SVO_dataset.feature_detection(detector, image_r_curr)
         # print(f"keypoints_l_prev = {keypoints_l_prev}")
         # print(f"descriptors_l_prev = {descriptors_l_prev}")
 
         # Feature matching
-        
+        matches_l = SVO_dataset.feature_matching(detector, descriptors_l_prev, descriptors_l_curr)
+        # print(f"matches_l = {matches_l}")
+
 
 if __name__ == "__main__":
     main()
