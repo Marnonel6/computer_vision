@@ -352,6 +352,74 @@ class VisualOdometry():
 
         return filtered_matches
 
+    def motion_estimation(self, matches_l, keypoints_l_prev, keypoints_l_curr, depth_map_prev, depth_threshold=1000):
+        """
+        Estimate motion from matched features
+
+        Parameters
+        ----------
+            matches_l (list): List of matches between current and previous left image
+            keypoints_l_prev (list): List of keypoints from previous (t-1) left image
+            keypoints_l_curr (list): List of keypoints from current (t) left image
+            depth_map_prev (np.array): Depth map from previous (t-1) left image
+            depth_threshold (int): Depth threshold for motion estimation
+
+        Returns
+        -------
+            motion (np.array): Motion vector
+        """
+
+        # Initialize rotation and translation vectors
+        R_mat = np.eye(3)
+        t_vec = np.zeros(3)
+
+        # Get the 2D points from the matched features
+        prev_image_points = np.float([keypoints_l_prev[match.queryIdx]].pt for match in matches_l)
+        curr_image_points = np.float([keypoints_l_curr[match.trainIdx]].pt for match in matches_l)
+
+        # Camera intrinsic parameters
+        cx = self.K_l[0,2]
+        cy = self.K_l[1,2]
+        fx = self.K_l[0,0]
+        fy = self.K_l[1,1]
+
+        # Initialize points_object
+        points_object = np.zeros((0, 3))
+        # Initialize delete list for points that's depth is above threshold
+        delete_list = []
+
+        for i, (u, v) in enumerate(prev_image_points):
+            # Get depth from depth map
+            depth = depth_map_prev[int(v), int(u)]
+
+            # Check if depth is above threshold
+            if depth > depth_threshold:
+                # Add index to delete list
+                delete_list.append(i)
+                continue
+            else:
+                # Compute 3D point
+                x = ((u - cx)/fx) * depth
+                y = ((v - cy)/fy) * depth
+                z = depth
+                points_object = np.vstack((points_object, np.array([x, y, z])))
+
+        # Delete points that's depth is above threshold
+        prev_image_points = np.delete(prev_image_points, delete_list, axis=0)
+        curr_image_points = np.delete(curr_image_points, delete_list, axis=0)
+
+        # Compute rotation and translation vectors from previous camera position to current camera position
+        _, R_vec, t_vec, _ = cv2.solvePnPRansac(points_object, curr_image_points, self.K_l, None)
+
+        # Convert rotation vector to rotation matrix
+        R_mat, _ = cv2.Rodrigues(R_vec)
+
+        return R_mat, t_vec
+
+
+
+
+
     # def triangulate_matched_features(self, matches, keypoints_l_prev, keypoints_l_curr):
     #     """
     #     Triangulate matched features
