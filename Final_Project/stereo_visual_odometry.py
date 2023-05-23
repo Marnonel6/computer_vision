@@ -366,7 +366,8 @@ class VisualOdometry():
 
         Returns
         -------
-            motion (np.array): Motion vector
+            R_mat (np.array): Rotation matrix
+            t_vec (np.array): Translation vector
         """
 
         # Initialize rotation and translation vectors
@@ -374,8 +375,8 @@ class VisualOdometry():
         t_vec = np.zeros(3)
 
         # Get the 2D points from the matched features
-        prev_image_points = np.float([keypoints_l_prev[match.queryIdx]].pt for match in matches_l)
-        curr_image_points = np.float([keypoints_l_curr[match.trainIdx]].pt for match in matches_l)
+        prev_image_points = np.float32([keypoints_l_prev[match.queryIdx].pt for match in matches_l])
+        curr_image_points = np.float32([keypoints_l_curr[match.trainIdx].pt for match in matches_l])
 
         # Camera intrinsic parameters
         cx = self.K_l[0,2]
@@ -458,7 +459,7 @@ def main():
     SVO_dataset = VisualOdometry(dataset = "07")
 
     # Choose feature detector type
-    detector = "orb"
+    detector = "sift"
     matcher = "bf"
 
     # Play images of the trip
@@ -539,12 +540,15 @@ def main():
     depth_map = SVO_dataset.stereo_to_depth(image_l_curr, image_r_curr, 'sgbm')
     mask = SVO_dataset.create_mask(depth_map)
 
+    # Total running transformation matrix
+    T_tot = np.eye(4)
+
     # Loop through the images
     # for i in range(len(SVO_dataset.image_l_list) - 1):
-    for i in range(2):
+    for i in range(5):
         # # Previous image
         image_l_prev = image_l_curr
-        # image_r_prev = image_r_curr
+        image_r_prev = image_r_curr
         # Current image
         image_l_curr = SVO_dataset.image_l_list[i+1]
         image_r_curr = SVO_dataset.image_r_list[i+1]
@@ -563,6 +567,30 @@ def main():
 
         # Match visualize matches
         SVO_dataset.feature_match_visualize(keypoints_l_prev, keypoints_l_curr, image_l_prev, image_l_curr, matches_l)
+
+        # Stereo to depth
+        depth_map_prev = SVO_dataset.stereo_to_depth(image_l_prev, image_r_prev, 'sgbm')
+
+        # Motion estimation
+        R_mat, t_vec = SVO_dataset.motion_estimation(matches_l, keypoints_l_prev, keypoints_l_curr, depth_map_prev, depth_threshold=1000)
+        # print(f"R_mat: {R_mat.round(5)} \nt_vec: {t_vec.round(5)}")
+
+        # Transformation matrix
+        T_mat = np.hstack([R_mat, t_vec])
+        # print(f"T_mat = {T_mat}")
+
+        # Create homogenous matrix -> Transformation matrix between frames
+        T_mat_hom = np.eye(4)
+        T_mat_hom[:3, :3] = R_mat
+        T_mat_hom[:3, 3] = t_vec.flatten()
+        # T_mat_hom = np.linalg.inv(T_mat_hom)
+        # print(f"T_mat_hom = {T_mat_hom.round(4)}")
+        # Calculate total trajectory
+        T_tot = T_tot.dot(np.linalg.inv(T_mat_hom))
+        print(f"T_tot = {T_tot.round(4)}")
+
+        # Print ground truth transformation matrix
+        print(f"GT T_mat = {SVO_dataset.GT_poses[i+1].round(4)}")
 
         # Compute disparity map
         disp_map = SVO_dataset.compute_disparity_map(image_l_curr, image_r_curr, 'sgbm')
