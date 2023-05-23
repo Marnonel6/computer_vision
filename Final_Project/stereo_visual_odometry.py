@@ -112,7 +112,7 @@ class VisualOdometry():
 
         return ground_truth
 
-    def feature_detection(self, detector, image):
+    def feature_detection(self, detector, image, mask=None): # TODO do mask!!
         """
         Feature detection/extraction
 
@@ -127,21 +127,21 @@ class VisualOdometry():
             descriptors (list): List of descriptors
         """
         if detector == 'orb':
-            orb = cv2.ORB_create()
+            detect = cv2.ORB_create()
             # Detects keypoints and computes corresponding feature descriptors and returns a list for each.
-            keypoints, descriptors = orb.detectAndCompute(image, mask=None)
         elif detector == 'sift':
-            sift = cv2.SIFT_create()
-            keypoints, descriptors = sift.detectAndCompute(image, mask=None)
+            detect = cv2.SIFT_create()
         # elif detector == 'surf':
         #     surf = cv2.SURF_create()
-        #     keypoints, descriptors = surf.detectAndCompute(image, mask=None)
+        #     keypoints, descriptors = surf.detectAndCompute(image, mask)
         else:
             raise Exception("Invalid detector type")
 
+        keypoints, descriptors = detect.detectAndCompute(image, mask)
+
         return keypoints, descriptors
     
-    def feature_matching(self, detector, descriptors_l_prev, descriptors_l_curr):
+    def feature_matching(self, matcher, detector, descriptors_l_prev, descriptors_l_curr, knn = True, k = 2, sort = False):
         """
         Feature matching
 
@@ -155,26 +155,78 @@ class VisualOdometry():
         -------
             matches (list): List of matches
         """
-        if detector == 'orb':
-            bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-        elif detector == 'sift':
-            bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
-        # elif detector == 'flann':
-        #     # FLANN parameters
-        #     FLANN_INDEX_LSH = 6
-        #     index_params = dict(algorithm=FLANN_INDEX_LSH,
-        #                         table_number=6,
-        #                         key_size=12,
-        #                         multi_probe_level=1)
-        #     search_params = dict(checks=50)
-        #     flann = cv2.FlannBasedMatcher(index_params, search_params)
-        #     matches = flann.knnMatch(descriptors_l, descriptors_r, k=2)
+        if matcher == 'bf':
+            if detector == 'orb': # TODO try HAMMING2
+                match = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False) # TODO Try True without ratio test
+            elif detector == 'sift':
+                match = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
+        elif detector == 'flann':
+            # FLANN parameters
+            # FLANN_INDEX_LSH = 6
+            # index_params = dict(algorithm=FLANN_INDEX_LSH,
+            #                     table_number=6,
+            #                     key_size=12,
+            #                     multi_probe_level=1)
+            # search_params = dict(checks=50)
+            # flann = cv2.FlannBasedMatcher(index_params, search_params)
+            # matches = flann.knnMatch(descriptors_l_prev, descriptors_l_curr, k)
+            FLANN_INDEX_KDTREE = 1
+            index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+            search_params = dict(checks = 50)
+            match = cv2.FlannBasedMatcher(index_params, search_params)
         else:
             raise Exception("Invalid matcher type")
 
-        matches = bf.match(descriptors_l_prev, descriptors_l_curr)
+        # Match features
+        if knn == True:
+            matches = match.knnMatch(descriptors_l_prev, descriptors_l_curr, k)
+        else:
+            matches = match.match(descriptors_l_prev, descriptors_l_curr)
+
+        if sort == True:
+            matches = sorted(matches, key = lambda x:x[0].distance)
 
         return matches
+
+    def create_mask(self, depth_map):
+        """
+        Create mask for feature detection
+
+        Parameters
+        ----------
+            depth_map (np.array): The depth map
+
+        Returns
+        -------
+            mask (np.array): The mask
+        """
+        mask = np.zeros(depth_map.shape, dtype = np.uint8)
+        y_max = depth_map.shape[0]
+        x_max = depth_map.shape[1]
+        cv2.rectangle(mask, (96, 0), (x_max, y_max), (255), thickness = -1)
+        # plt.imshow(mask)
+        return mask
+
+    def feature_match_visualize(self, keypoints_l_prev, keypoints_l_curr, image_l_prev, image_l_curr, matches):
+        """
+        Visualize feature matches
+
+        Parameters
+        ----------
+            keypoints_l_prev (list): List of keypoints from previous (t-1) left image
+            keypoints_l_curr (list): List of keypoints from current (t) left image
+            image_l_prev (np.array): Previous (t-1) left image
+            image_l_curr (np.array): Current (t) left image
+            matches (list): List of matches
+
+        Returns
+        -------
+            matches_image (np.array): Image with feature matches drawn
+        """
+        # Draw matches
+        matches_image = cv2.drawMatches(image_l_prev, keypoints_l_prev, image_l_curr, keypoints_l_curr, matches, None, flags=2)
+        plt.figure(figsize = (16,6), dpi = 100)
+        plt.imshow(matches_image)
 
     def compute_disparity_map(self, image_l, image_r, matcher):
         """
@@ -252,8 +304,6 @@ class VisualOdometry():
 
         return depth_map
 
-    # def generate_mask() TODO
-
     def stereo_to_depth(self, image_l, image_r, matcher):
         """
         Stereo to depth
@@ -276,6 +326,31 @@ class VisualOdometry():
 
         return depth_map
 
+    def ratio_test_filter(self, matches, ratio=0.45):
+        """
+        Filter matches based on distance ratio to closes features.
+        If both matches are close then it is a bad feature and should be removed.
+        NOTE Ratio test is used with a value of 0.45
+        https://docs.opencv.org/3.4/d5/d6f/tutorial_feature_flann_matcher.html
+
+        Parameters
+        ----------
+            matches (list): List of matches -> List of 2 items list (KNN -> k = 2)
+            ratio (float): Distance ratio
+
+        Returns
+        -------
+            filtered_matches (list): List of goof filtered matches
+        """
+        # Initialize list for filtered matches
+        filtered_matches = []
+
+        # Filter matches based on distance
+        for d1, d2 in matches:
+            if d1.distance <= ratio * d2.distance:
+                filtered_matches.append(d1)
+
+        return filtered_matches
 
     # def triangulate_matched_features(self, matches, keypoints_l_prev, keypoints_l_curr):
     #     """
@@ -316,6 +391,7 @@ def main():
 
     # Choose feature detector type
     detector = "orb"
+    matcher = "bf"
 
     # Play images of the trip
     # vs.play_trip(SVO_dataset.image_l_list, SVO_dataset.image_r_list)
@@ -346,7 +422,7 @@ def main():
     # keypoints_r_curr, descriptors_r_curr = SVO_dataset.feature_detection(detector, image_r_curr)
 
     # # Feature matching
-    # matches_l = SVO_dataset.feature_matching(detector, descriptors_l_prev, descriptors_l_curr)
+    # matches_l = SVO_dataset.feature_matching(matcher, detector, descriptors_l_prev, descriptors_l_curr)
 
     # NOTE this happens when stereo to depth is called
     # # Compute disparity map
@@ -391,14 +467,34 @@ def main():
     image_l_curr = SVO_dataset.image_l_list[0]
     image_r_curr = SVO_dataset.image_r_list[0]
 
+    # Generate mask once
+    depth_map = SVO_dataset.stereo_to_depth(image_l_curr, image_r_curr, 'sgbm')
+    mask = SVO_dataset.create_mask(depth_map)
+
     # Loop through the images
-    for i in range(len(SVO_dataset.image_l_list) - 1):
+    # for i in range(len(SVO_dataset.image_l_list) - 1):
+    for i in range(2):
         # # Previous image
-        # image_l_prev = image_l_curr
+        image_l_prev = image_l_curr
         # image_r_prev = image_r_curr
         # Current image
         image_l_curr = SVO_dataset.image_l_list[i+1]
         image_r_curr = SVO_dataset.image_r_list[i+1]
+
+        # Feature detection/extraction
+        keypoints_l_prev, descriptors_l_prev = SVO_dataset.feature_detection(detector, image_l_prev, mask)
+        keypoints_l_curr, descriptors_l_curr = SVO_dataset.feature_detection(detector, image_l_curr, mask)
+
+        # Feature matching
+        matches_l = SVO_dataset.feature_matching(matcher, detector, descriptors_l_prev, descriptors_l_curr)
+        # print(f"Matches before filter: {len(matches_l)}")
+
+        # Ratio test matches filtering
+        matches_l = SVO_dataset.ratio_test_filter(matches_l)
+        # print(f"Matches after filter: {len(matches_l)}")
+
+        # Match visualize matches
+        SVO_dataset.feature_match_visualize(keypoints_l_prev, keypoints_l_curr, image_l_prev, image_l_curr, matches_l)
 
         # Compute disparity map
         disp_map = SVO_dataset.compute_disparity_map(image_l_curr, image_r_curr, 'sgbm')
@@ -413,10 +509,11 @@ def main():
         ys.append(SVO_dataset.GT_poses[i, 1, 3])
         zs.append(SVO_dataset.GT_poses[i, 2, 3])
 
+        # Plot moving path as car moves
         plt.plot(xs, ys, zs, c = 'chartreuse')
         plt.pause(0.000000000000000000000000001)
-        cv2.imshow('camera', image_l_curr)
-        cv2.imshow('disparity', disp_map)
+        cv2.imshow('camera', image_l_curr) # Play camera video
+        cv2.imshow('disparity', disp_map)  # Play disparity video
         cv2.waitKey(1)
 
     plt.close()
