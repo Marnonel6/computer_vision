@@ -104,7 +104,11 @@ class VisualOdometry():
             ground_truth (np.array): Ground truth poses
         """
         poses = pandas.read_csv(poses_path, delimiter=' ', header = None)
-        ground_truth = poses.to_numpy()
+        # ground_truth = poses.to_numpy()
+
+        ground_truth = np.zeros((len(poses),3,4))
+        for i in range(len(poses)):
+            ground_truth[i] = np.array(poses.iloc[i]).reshape((3,4))
 
         return ground_truth
 
@@ -183,7 +187,7 @@ class VisualOdometry():
         ----------
             image_l (np.array): Left grayscale image
             image_r (np.array): Right grayscale image
-            matcher (bm or sgbm): Stereo matcher
+            matcher (str(): bm or sgbm): Stereo matcher
             NOTE: bm is faster than sgbm, but sgbm is more accurate
 
         Returns
@@ -217,7 +221,8 @@ class VisualOdometry():
 
     def compute_depth_map(self, disparity_map, K_l, t_l, t_r):
         """
-        Compute depth map of rectified camera
+        Compute depth map of rectified camera.
+        NOTE this is relative to the left camera as it is considered the world frame
 
         Parameters
         ----------
@@ -244,6 +249,30 @@ class VisualOdometry():
         # Calculate depth map
         depth_map = np.zeros(disparity_map.shape)
         depth_map = f * b / disparity_map
+
+        return depth_map
+
+    # def generate_mask() TODO
+
+    def stereo_to_depth(self, image_l, image_r, matcher):
+        """
+        Stereo to depth
+
+        Parameters
+        ----------
+            image_l (np.array): Left image
+            image_r (np.array): Right image
+            matcher (str(): bm or sgbm): Stereo matcher
+        Returns
+        -------
+            depth_map (np.array): Depth map
+        """
+
+        # Compute disparity map
+        disp_map = self.compute_disparity_map(image_l, image_r, matcher)
+
+        # Compute depth map
+        depth_map = self.compute_depth_map(disp_map, self.K_l, self.t_l, self.t_r)
 
         return depth_map
 
@@ -293,50 +322,106 @@ def main():
 
     """ Preform visual odometry on the dataset """
 
-    # Initialize the trajectory
-    estimated_traj = np.zeros((len(SVO_dataset.image_l_list), 3, 4))
-    T_current = np.eye(4) # Start at identity matrix
-    estimated_traj[0] = T_current[:3, :]
+    # # Initialize the trajectory
+    # estimated_traj = np.zeros((len(SVO_dataset.image_l_list), 3, 4))
+    # T_current = np.eye(4) # Start at identity matrix
+    # estimated_traj[0] = T_current[:3, :]
+
+    # # Setup visual odometry images
+    # image_l_curr = SVO_dataset.image_l_list[0]
+    # image_r_curr = SVO_dataset.image_r_list[0]
+
+    # """ TEST ONE RUN START """
+    # # Previous image
+    # image_l_prev = image_l_curr
+    # image_r_prev = image_r_curr
+    # # Current image
+    # image_l_curr = SVO_dataset.image_l_list[1]
+    # image_r_curr = SVO_dataset.image_r_list[1]
+
+    # # Feature detection/extraction
+    # keypoints_l_prev, descriptors_l_prev = SVO_dataset.feature_detection(detector, image_l_prev)
+    # keypoints_r_prev, descriptors_r_prev = SVO_dataset.feature_detection(detector, image_r_prev)
+    # keypoints_l_curr, descriptors_l_curr = SVO_dataset.feature_detection(detector, image_l_curr)
+    # keypoints_r_curr, descriptors_r_curr = SVO_dataset.feature_detection(detector, image_r_curr)
+
+    # # Feature matching
+    # matches_l = SVO_dataset.feature_matching(detector, descriptors_l_prev, descriptors_l_curr)
+
+    # NOTE this happens when stereo to depth is called
+    # # Compute disparity map
+    # disp_map = SVO_dataset.compute_disparity_map(image_l_prev, image_r_prev, 'sgbm')
+    # # plt.figure(figsize=(11,7))
+    # # plt.imshow(disp)
+    # # plt.show()
+    # # Compute depth map
+    # depth_map = SVO_dataset.compute_depth_map(disp_map, SVO_dataset.K_l, SVO_dataset.t_l, SVO_dataset.t_r)
+    # plt.figure(figsize=(11,7))
+    # plt.imshow(depth_map)
+    # plt.show()
+    # # NOTE Plot depths as a histogram to see what depths range is and what can be filtered out
+    # plt.hist(depth_map.flatten())
+    # plt.show()
+
+    # Stereo to depth
+    # depth_map = SVO_dataset.stereo_to_depth(image_l_prev, image_r_prev, 'sgbm')
+    # plt.figure(figsize=(11,7))
+    # plt.imshow(depth_map)
+    # plt.show()
+    # NOTE Plot depths as a histogram to see what depths range is and what can be filtered out
+    # plt.hist(depth_map.flatten())
+    # plt.show()
+
+
+    """ TEST ONE RUN END """
+
+    xs = []
+    ys = []
+    zs = []
+
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.view_init(elev=-20, azim=270)
+    ax.plot(SVO_dataset.GT_poses[:, 0, 3], SVO_dataset.GT_poses[:, 1, 3], SVO_dataset.GT_poses[:, 2, 3], c = 'k') # Ground truth
 
     # Setup visual odometry images
     image_l_curr = SVO_dataset.image_l_list[0]
     image_r_curr = SVO_dataset.image_r_list[0]
 
-    """ TEST ONE RUN START """
-    # Previous image
-    image_l_prev = image_l_curr
-    image_r_prev = image_r_curr
-    # Current image
-    image_l_curr = SVO_dataset.image_l_list[1]
-    image_r_curr = SVO_dataset.image_r_list[1]
+    # Loop through the images
+    for i in range(len(SVO_dataset.image_l_list) - 1):
+        # # Previous image
+        # image_l_prev = image_l_curr
+        # image_r_prev = image_r_curr
+        # Current image
+        image_l_curr = SVO_dataset.image_l_list[i+1]
+        image_r_curr = SVO_dataset.image_r_list[i+1]
 
-    # Feature detection/extraction
-    keypoints_l_prev, descriptors_l_prev = SVO_dataset.feature_detection(detector, image_l_prev)
-    keypoints_r_prev, descriptors_r_prev = SVO_dataset.feature_detection(detector, image_r_prev)
-    keypoints_l_curr, descriptors_l_curr = SVO_dataset.feature_detection(detector, image_l_curr)
-    keypoints_r_curr, descriptors_r_curr = SVO_dataset.feature_detection(detector, image_r_curr)
+        # Compute disparity map
+        disp_map = SVO_dataset.compute_disparity_map(image_l_curr, image_r_curr, 'sgbm')
+        # Make closer object light and further away object dark (Invert)
+        disp_map /= disp_map.max()
+        disp_map = 1 - disp_map # Invert colors
+        disp_map = (disp_map*255).astype('uint8')
+        disp_map = cv2.applyColorMap(disp_map, cv2.COLORMAP_RAINBOW) # Apply color
 
-    # Feature matching
-    matches_l = SVO_dataset.feature_matching(detector, descriptors_l_prev, descriptors_l_curr)
+        # CURRENT POSITION OF CAR PLOTTED IN GREEN
+        xs.append(SVO_dataset.GT_poses[i, 0, 3])
+        ys.append(SVO_dataset.GT_poses[i, 1, 3])
+        zs.append(SVO_dataset.GT_poses[i, 2, 3])
 
-    # Compute disparity map
-    disp_map = SVO_dataset.compute_disparity_map(image_l_prev, image_r_prev, 'sgbm')
-    # plt.figure(figsize=(11,7))
-    # plt.imshow(disp)
-    # plt.show()
+        plt.plot(xs, ys, zs, c = 'chartreuse')
+        plt.pause(0.000000000000000000000000001)
+        cv2.imshow('camera', image_l_curr)
+        cv2.imshow('disparity', disp_map)
+        cv2.waitKey(1)
 
-    # Compute depth map
-    depth_map = SVO_dataset.compute_depth_map(disp_map, SVO_dataset.K_l, SVO_dataset.t_l, SVO_dataset.t_r)
-    plt.figure(figsize=(11,7))
-    plt.imshow(depth_map)
-    # NOTE Plot depths as a histogram to see what depths range is and what can be filtered out
-    plt.hist(depth_map.flatten())
-    plt.show()
+    plt.close()
+    cv2.destroyAllWindows()
 
-    """ TEST ONE RUN END """
-
-
-    # for i in range(len(SVO_dataset.image_l_list) - 1):
 
 if __name__ == "__main__":
     main()
