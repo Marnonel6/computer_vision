@@ -21,7 +21,7 @@ class VisualOdometry():
         self.dataset_path = "dataset"
 
         # Camera intrinsic parameters and Projection matrix
-        self.P_l, self.P_r, self.K_l, self.K_r = self.import_calibration_parameters(self.dataset_path + "/sequences/" + self.dataset)
+        self.P_l, self.P_r, self.K_l, self.K_r, self.t_l, self.t_r = self.import_calibration_parameters(self.dataset_path + "/sequences/" + self.dataset)
         # print(f"P_l = {self.P_l}")
         # print(f"P_r = {self.P_r}")
         # print(f"K_l = {self.K_l}")
@@ -82,10 +82,14 @@ class VisualOdometry():
         P_l = np.array(calib_params.loc['P0:']).reshape((3,4))
         P_r = np.array(calib_params.loc['P1:']).reshape((3,4))
         # Camera intrinsic parameters
-        K_l = cv2.decomposeProjectionMatrix(P_l)[0]
-        K_r = cv2.decomposeProjectionMatrix(P_r)[0]
+        K_l, R_l, t_l, _, _, _, _  = cv2.decomposeProjectionMatrix(P_l)
+        K_r, R_r, t_r, _, _, _, _ = cv2.decomposeProjectionMatrix(P_r)
 
-        return P_l, P_r, K_l, K_r
+        # Normalize translation vectors to non-homogenous (euclidean) coordinates
+        t_l = (t_l / t_l[3])[:3]
+        t_r = (t_r / t_r[3])[:3]
+
+        return P_l, P_r, K_l, K_r, t_l, t_r
 
     def import_ground_truth(self, poses_path):
         """
@@ -168,6 +172,113 @@ class VisualOdometry():
 
         return matches
 
+    def compute_disparity_map(self, image_l, image_r, matcher):
+        """
+        Compute disparity map:
+            ParametersA disparity map is a visual representation that shows the pixel-wise
+            horizontal shift or difference between corresponding points in a pair of stereo images,
+            providing depth information for the scene.
+
+        Parameters
+        ----------
+            image_l (np.array): Left grayscale image
+            image_r (np.array): Right grayscale image
+            matcher (bm or sgbm): Stereo matcher
+            NOTE: bm is faster than sgbm, but sgbm is more accurate
+
+        Returns
+        -------
+            disparity_map (np.array): Disparity map [distance in pixels]
+        """
+        sad_window = 6 # Sum of absolute differences
+        num_disparities = sad_window*16
+        block_size = 11
+        matcher_name = matcher
+        number_of_image_channels = 1 # Grayscale -> 1, RGB -> 3
+
+        # Compute disparity map
+        if matcher_name == 'bm':
+            matcher = cv2.StereoBM_create(numDisparities=num_disparities, blockSize=block_size)
+        elif matcher_name == 'sgbm':
+            matcher = cv2.StereoSGBM_create(minDisparity=0,
+                                            numDisparities=num_disparities,
+                                            blockSize=block_size,
+                                            P1=8 * number_of_image_channels * sad_window ** 2,
+                                            P2=32 * number_of_image_channels * sad_window ** 2,
+                                            disp12MaxDiff=1,
+                                            uniquenessRatio=10,
+                                            speckleWindowSize=100,
+                                            speckleRange=32,
+                                            mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY)
+
+        disparity_map = matcher.compute(image_l, image_r).astype(np.float32) / 16.0
+
+        return disparity_map
+
+    def compute_depth_map(self, disparity_map, K_l, t_l, t_r):
+        """
+        Compute depth map of rectified camera
+
+        Parameters
+        ----------
+            disparity_map (np.array): Disparity map
+            K_l (np.array): Left camera intrinsic matrix
+            K_r (np.array): Right camera intrinsic matrix
+
+        Returns
+        -------
+            depth_map (np.array): Depth map
+        """
+
+        # Compute baseline [meters]
+        b = abs(t_l[0] - t_r[0])
+        # Compute focal length [pixels]
+        f = K_l[0,0]
+
+        # NOTE Set the zero values and the -1 (No overlap between left and right camera image)
+        # in disparity map to a small value to be able to divide with disparity. This will ensure that the
+        # estimate depth of these points are very far away and thus can be ignored.
+        disparity_map[disparity_map == 0.0] = 0.1
+        disparity_map[disparity_map == -1.0] = 0.1
+
+        # Calculate depth map
+        depth_map = np.zeros(disparity_map.shape)
+        depth_map = f * b / disparity_map
+
+        return depth_map
+
+
+    # def triangulate_matched_features(self, matches, keypoints_l_prev, keypoints_l_curr):
+    #     """
+    #     Triangulate matched features
+
+    #     Parameters
+    #     ----------
+    #         matches (list): List of matches
+    #         keypoints_l_prev (list): List of keypoints from previous (t-1) left image
+    #         keypoints_l_curr (list): List of keypoints from current (t) left image
+    #     Returns
+    #     -------
+    #         point_3d (list): List of 3D points
+    #     """
+    #     # Initialize list for 3D points
+    #     point_3d = []
+
+    #     # Triangulate each matched feature
+    #     for match in matches:
+    #         # Get the keypoints for each match
+    #         kp_l_prev = keypoints_l_prev[match.queryIdx].pt
+    #         kp_l_curr = keypoints_l_curr[match.trainIdx].pt
+
+    #         # Triangulate the 3D point
+    #         point_4d = cv2.triangulatePoints(self.P_l, self.P_r, kp_l_prev, kp_r_prev) #3d prev point
+
+    #         # Convert to homogeneous coordinates
+    #         point_3d = point_4d[:3] / point_4d[3]
+
+    #         # Add to list of 3D points
+    #         point_3d.append(point_3d)
+
 def main():
     """
     main function
@@ -178,7 +289,7 @@ def main():
     detector = "orb"
 
     # Play images of the trip
-    vs.play_trip(SVO_dataset.image_l_list, SVO_dataset.image_r_list)
+    # vs.play_trip(SVO_dataset.image_l_list, SVO_dataset.image_r_list)
 
     """ Preform visual odometry on the dataset """
 
@@ -191,27 +302,41 @@ def main():
     image_l_curr = SVO_dataset.image_l_list[0]
     image_r_curr = SVO_dataset.image_r_list[0]
 
+    """ TEST ONE RUN START """
+    # Previous image
+    image_l_prev = image_l_curr
+    image_r_prev = image_r_curr
+    # Current image
+    image_l_curr = SVO_dataset.image_l_list[1]
+    image_r_curr = SVO_dataset.image_r_list[1]
+
+    # Feature detection/extraction
+    keypoints_l_prev, descriptors_l_prev = SVO_dataset.feature_detection(detector, image_l_prev)
+    keypoints_r_prev, descriptors_r_prev = SVO_dataset.feature_detection(detector, image_r_prev)
+    keypoints_l_curr, descriptors_l_curr = SVO_dataset.feature_detection(detector, image_l_curr)
+    keypoints_r_curr, descriptors_r_curr = SVO_dataset.feature_detection(detector, image_r_curr)
+
+    # Feature matching
+    matches_l = SVO_dataset.feature_matching(detector, descriptors_l_prev, descriptors_l_curr)
+
+    # Compute disparity map
+    disp_map = SVO_dataset.compute_disparity_map(image_l_prev, image_r_prev, 'sgbm')
+    # plt.figure(figsize=(11,7))
+    # plt.imshow(disp)
+    # plt.show()
+
+    # Compute depth map
+    depth_map = SVO_dataset.compute_depth_map(disp_map, SVO_dataset.K_l, SVO_dataset.t_l, SVO_dataset.t_r)
+    plt.figure(figsize=(11,7))
+    plt.imshow(depth_map)
+    # NOTE Plot depths as a histogram to see what depths range is and what can be filtered out
+    plt.hist(depth_map.flatten())
+    plt.show()
+
+    """ TEST ONE RUN END """
+
+
     # for i in range(len(SVO_dataset.image_l_list) - 1):
-    for i in range(1):
-        # Previous image
-        image_l_prev = image_l_curr
-        image_r_prev = image_r_curr
-        # Current image
-        image_l_curr = SVO_dataset.image_l_list[i + 1]
-        image_r_curr = SVO_dataset.image_r_list[i + 1]
-
-        # Feature detection/extraction
-        keypoints_l_prev, descriptors_l_prev = SVO_dataset.feature_detection(detector, image_l_prev)
-        keypoints_r_prev, descriptors_r_prev = SVO_dataset.feature_detection(detector, image_r_prev)
-        keypoints_l_curr, descriptors_l_curr = SVO_dataset.feature_detection(detector, image_l_curr)
-        keypoints_r_curr, descriptors_r_curr = SVO_dataset.feature_detection(detector, image_r_curr)
-        # print(f"keypoints_l_prev = {keypoints_l_prev}")
-        # print(f"descriptors_l_prev = {descriptors_l_prev}")
-
-        # Feature matching
-        matches_l = SVO_dataset.feature_matching(detector, descriptors_l_prev, descriptors_l_curr)
-        # print(f"matches_l = {matches_l}")
-
 
 if __name__ == "__main__":
     main()
