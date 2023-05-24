@@ -532,8 +532,21 @@ class VisualOdometry():
                 ax.plot(xs, ys, zs, c = 'r')
                 plt.pause(1e-30)
 
-        # if plot:
-        #     plt.close
+                # Compute disparity map
+                depth_map_prev = self.compute_disparity_map(image_l_curr, image_r_curr, 'sgbm')
+
+                # Make closer object light and further away object dark (Invert)
+                depth_map_prev /= depth_map_prev.max()
+                depth_map_prev = 1 - depth_map_prev # Invert colors
+                depth_map_prev = (depth_map_prev*255).astype('uint8')
+                depth_map_prev = cv2.applyColorMap(depth_map_prev, cv2.COLORMAP_RAINBOW) # Apply color
+
+                cv2.imshow('camera', image_l_curr) # Play camera video
+                cv2.imshow('disparity', depth_map_prev)  # Play disparity video
+                cv2.waitKey(1)
+
+        if plot:
+            plt.close()
 
         return trajectory_est
 
@@ -541,7 +554,8 @@ def main():
     """
     main function
     """
-    SVO_dataset = VisualOdometry(dataset = "07")
+    # Good path prediction dataset KITTI -> 03, 05
+    SVO_dataset = VisualOdometry(dataset = "05")
 
     # Choose feature detector type
     detector = "sift"
