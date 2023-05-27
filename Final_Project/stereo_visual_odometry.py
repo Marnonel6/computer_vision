@@ -1,40 +1,42 @@
 """
-Stereo visual odometry with the KITTI dataset
+Stereo visual odometry (3D to 2D) with the KITTI dataset
 
 https://www.cvlibs.net/datasets/kitti/eval_odometry.php
 
 Author: Marthinus (Marno) Nel
 Date: 21 May 2023
+References:
+    [1] Scaramuzza, Davide & Fraundorfer, Friedrich. (2011). Visual Odometry [Tutorial].
+        IEEE Robot. Automat. Mag.. 18. 80-92. 10.1109/MRA.2011.943233.
+        https://www.researchgate.net/publication/220556161_Visual_Odometry_Tutorial
+    [2] Fraundorfer, Friedrich & Scaramuzza, Davide. (2012). Visual Odometry: Part II -
+        Matching, Robustness, and Applications. IEEE Robotics & Automation Magazine
+        - IEEE ROBOT AUTOMAT. 19. 78-90. 10.1109/MRA.2012.2182810.
+        https://www.researchgate.net/publication/241638257_Visual_Odometry_Part_II_-_Matching_Robustness_and_Applications
 """
 
 import os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import least_squares
 import pandas
 import visualize as vs
 
 class VisualOdometry():
-    def __init__(self, dataset="07"):
+    def __init__(self, dataset="09"):
         self.dataset = dataset
         self.dataset_path = "dataset"
 
         # Camera intrinsic parameters and Projection matrix
-        self.P_l, self.P_r, self.K_l, self.K_r, self.t_l, self.t_r = self.import_calibration_parameters(self.dataset_path + "/sequences/" + self.dataset)
-        # print(f"P_l = {self.P_l}")
-        # print(f"P_r = {self.P_r}")
-        # print(f"K_l = {self.K_l}")
-        # print(f"K_r = {self.K_r}")
+        self.P_l, self.P_r, self.K_l, self.K_r, self.t_l, self.t_r = \
+            self.import_calibration_parameters(self.dataset_path + "/sequences/" + self.dataset)
 
         # Ground truth poses
         self.GT_poses = self.import_ground_truth(self.dataset_path + "/poses/" + self.dataset + ".txt")
-        # print(f"GT_poses = {self.GT_poses}")
 
         # Load stereo images into a list
-        self.image_l_list, self.image_r_list = self.import_images(self.dataset_path + "/sequences/" + self.dataset)
-        # print(f"image_l = {self.image_l_list}")
-        # print(f"image_r = {self.image_r_list}")
+        self.image_l_list, self.image_r_list = self.import_images(self.dataset_path + "/sequences/"\
+                                                                  + self.dataset)
 
     def import_images(self, image_dir_path):
         """
@@ -104,7 +106,6 @@ class VisualOdometry():
             ground_truth (np.array): Ground truth poses
         """
         poses = pandas.read_csv(poses_path, delimiter=' ', header = None)
-        # ground_truth = poses.to_numpy()
 
         ground_truth = np.zeros((len(poses),3,4))
         for i in range(len(poses)):
@@ -131,9 +132,6 @@ class VisualOdometry():
             # Detects keypoints and computes corresponding feature descriptors and returns a list for each.
         elif detector == 'sift':
             detect = cv2.SIFT_create()
-        # elif detector == 'surf':
-        #     surf = cv2.SURF_create()
-        #     keypoints, descriptors = surf.detectAndCompute(image, mask)
         else:
             raise Exception("Invalid detector type")
 
@@ -160,20 +158,6 @@ class VisualOdometry():
                 match = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False) # TODO Try True without ratio test
             elif detector == 'sift':
                 match = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
-        elif detector == 'flann':
-            # FLANN parameters
-            # FLANN_INDEX_LSH = 6
-            # index_params = dict(algorithm=FLANN_INDEX_LSH,
-            #                     table_number=6,
-            #                     key_size=12,
-            #                     multi_probe_level=1)
-            # search_params = dict(checks=50)
-            # flann = cv2.FlannBasedMatcher(index_params, search_params)
-            # matches = flann.knnMatch(descriptors_l_prev, descriptors_l_curr, k)
-            FLANN_INDEX_KDTREE = 1
-            index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-            search_params = dict(checks = 50)
-            match = cv2.FlannBasedMatcher(index_params, search_params)
         else:
             raise Exception("Invalid matcher type")
 
@@ -518,9 +502,6 @@ class VisualOdometry():
             # Update trajectory
             trajectory_est[i+1, :, :] = T_total[:3, :]
 
-            # TODO end timer
-            # print(f"Time to compute frame {}")
-
             # Dynamic plotting
             if plot:
                 # Plot estimated trajectory
@@ -554,24 +535,28 @@ def main():
     """
     main function
     """
-    # Good path prediction dataset KITTI -> 03, 05
-    SVO_dataset = VisualOdometry(dataset = "05")
+    # Good path prediction dataset KITTI -> 03, 05, 07, 09
+    SVO_dataset = VisualOdometry(dataset = "09")
 
     # Choose feature detector type
-    detector = "sift"
+    detector = "sift" # "orb"
     matcher = "bf"
-    ratio = 0.5
-    stereo_disparity_matcher = 'sgbm'
-    num_frames = 100    # None -> for all frames
+    ratio = 0.45 # 0.6
+    stereo_disparity_matcher = "sgbm" #"bm"
+    num_frames = None    # None -> for all frames
 
     # Preform visual odometry
     trajectory_est = SVO_dataset.stereo_visual_odometry(detector, matcher, ratio, stereo_disparity_matcher,
                                                  num_frames, plot = True)
 
-    # Play images of the trip
-    # vs.play_trip(SVO_dataset.image_l_list, SVO_dataset.image_r_list)
+    """ 
+    Preform visual odometry on the dataset and visualize depth, feature matching and disparity map.
 
-    """ Preform visual odometry on the dataset """
+    Used for debugging.
+    """
+
+    ## Play images of the trip
+    # vs.play_trip(SVO_dataset.image_l_list, SVO_dataset.image_r_list)
 
     # # Initialize the trajectory
     # estimated_traj = np.zeros((len(SVO_dataset.image_l_list), 3, 4))
@@ -599,7 +584,7 @@ def main():
     # # Feature matching
     # matches_l = SVO_dataset.feature_matching(matcher, detector, descriptors_l_prev, descriptors_l_curr)
 
-    # NOTE this happens when stereo to depth is called
+    # # NOTE this happens when stereo to depth is called
     # # Compute disparity map
     # disp_map = SVO_dataset.compute_disparity_map(image_l_prev, image_r_prev, 'sgbm')
     # # plt.figure(figsize=(11,7))
@@ -607,6 +592,12 @@ def main():
     # # plt.show()
     # # Compute depth map
     # depth_map = SVO_dataset.compute_depth_map(disp_map, SVO_dataset.K_l, SVO_dataset.t_l, SVO_dataset.t_r)
+    # depth_map[depth_map >= 50] = 0
+    # # Make closer object light and further away object dark (Invert)
+    # depth_map /= depth_map.max()
+    # # depth_map = 1 - depth_map # Invert colors
+    # depth_map = (depth_map*255).astype('uint8')
+    # # depth_map = cv2.applyColorMap(depth_map, cv2.COLORMAP_RAINBOW) # Apply color
     # plt.figure(figsize=(11,7))
     # plt.imshow(depth_map)
     # plt.show()
@@ -614,7 +605,7 @@ def main():
     # plt.hist(depth_map.flatten())
     # plt.show()
 
-    # Stereo to depth
+    # # Stereo to depth
     # depth_map = SVO_dataset.stereo_to_depth(image_l_prev, image_r_prev, 'sgbm')
     # plt.figure(figsize=(11,7))
     # plt.imshow(depth_map)
@@ -622,107 +613,6 @@ def main():
     # NOTE Plot depths as a histogram to see what depths range is and what can be filtered out
     # plt.hist(depth_map.flatten())
     # plt.show()
-
-
-    """ TEST ONE RUN END """
-
-    # xs = []
-    # ys = []
-    # zs = []
-
-    # fig = plt.figure()
-    # ax = fig.add_subplot(projection='3d')
-    # ax.set_xlabel('X')
-    # ax.set_ylabel('Y')
-    # ax.set_zlabel('Z')
-    # ax.view_init(elev=-20, azim=270)
-    # ax.plot(SVO_dataset.GT_poses[:, 0, 3], SVO_dataset.GT_poses[:, 1, 3], SVO_dataset.GT_poses[:, 2, 3], c = 'k') # Ground truth
-
-    # # Setup visual odometry images
-    # image_l_curr = SVO_dataset.image_l_list[0]
-    # image_r_curr = SVO_dataset.image_r_list[0]
-
-    # # Generate mask once
-    # depth_map = SVO_dataset.stereo_to_depth(image_l_curr, image_r_curr, 'sgbm')
-    # mask = SVO_dataset.create_mask(depth_map)
-
-    # # Total running transformation matrix
-    # T_tot = np.eye(4)
-
-    # # Loop through the images
-    # # for i in range(len(SVO_dataset.image_l_list) - 1):
-    # for i in range(5):
-    #     # # Previous image
-    #     image_l_prev = image_l_curr
-    #     image_r_prev = image_r_curr
-    #     # Current image
-    #     image_l_curr = SVO_dataset.image_l_list[i+1]
-    #     image_r_curr = SVO_dataset.image_r_list[i+1]
-
-    #     # Feature detection/extraction
-    #     keypoints_l_prev, descriptors_l_prev = SVO_dataset.feature_detection(detector, image_l_prev, mask)
-    #     keypoints_l_curr, descriptors_l_curr = SVO_dataset.feature_detection(detector, image_l_curr, mask)
-
-    #     # Feature matching
-    #     matches_l = SVO_dataset.feature_matching(matcher, detector, descriptors_l_prev, descriptors_l_curr)
-    #     # print(f"Matches before filter: {len(matches_l)}")
-
-    #     # Ratio test matches filtering
-    #     matches_l = SVO_dataset.ratio_test_filter(matches_l)
-    #     # print(f"Matches after filter: {len(matches_l)}")
-
-    #     # Match visualize matches
-    #     SVO_dataset.feature_match_visualize(keypoints_l_prev, keypoints_l_curr, image_l_prev, image_l_curr, matches_l)
-
-    #     # Stereo to depth
-    #     depth_map_prev = SVO_dataset.stereo_to_depth(image_l_prev, image_r_prev, 'sgbm')
-
-    #     # Motion estimation
-    #     R_mat, t_vec = SVO_dataset.motion_estimation(matches_l, keypoints_l_prev, keypoints_l_curr, depth_map_prev, depth_threshold=1000)
-    #     # print(f"R_mat: {R_mat.round(5)} \nt_vec: {t_vec.round(5)}")
-
-    #     # Transformation matrix
-    #     T_mat = np.hstack([R_mat, t_vec])
-    #     # print(f"T_mat = {T_mat}")
-
-    #     # Create homogenous matrix -> Transformation matrix between frames
-    #     T_mat_hom = np.eye(4)
-    #     T_mat_hom[:3, :3] = R_mat
-    #     T_mat_hom[:3, 3] = t_vec.flatten()
-    #     # T_mat_hom = np.linalg.inv(T_mat_hom)
-    #     # print(f"T_mat_hom = {T_mat_hom.round(4)}")
-
-    #     # Calculate total trajectory
-    #     T_tot = T_tot.dot(np.linalg.inv(T_mat_hom))
-    #     # print(f"T_tot = {T_tot.round(4)}")
-    #     # Print ground truth transformation matrix
-    #     # print(f"GT T_mat = {SVO_dataset.GT_poses[i+1].round(4)}")
-
-        
-
-    #     # Compute disparity map
-    #     disp_map = SVO_dataset.compute_disparity_map(image_l_curr, image_r_curr, 'sgbm')
-    #     # Make closer object light and further away object dark (Invert)
-    #     disp_map /= disp_map.max()
-    #     disp_map = 1 - disp_map # Invert colors
-    #     disp_map = (disp_map*255).astype('uint8')
-    #     disp_map = cv2.applyColorMap(disp_map, cv2.COLORMAP_RAINBOW) # Apply color
-
-    #     # CURRENT POSITION OF CAR PLOTTED IN GREEN
-    #     xs.append(SVO_dataset.GT_poses[i, 0, 3])
-    #     ys.append(SVO_dataset.GT_poses[i, 1, 3])
-    #     zs.append(SVO_dataset.GT_poses[i, 2, 3])
-
-    #     # Plot moving path as car moves
-    #     plt.plot(xs, ys, zs, c = 'chartreuse')
-    #     plt.pause(0.000000000000000000000000001)
-    #     cv2.imshow('camera', image_l_curr) # Play camera video
-    #     cv2.imshow('disparity', disp_map)  # Play disparity video
-    #     cv2.waitKey(1)
-
-    # plt.close()
-    # cv2.destroyAllWindows()
-
 
 if __name__ == "__main__":
     main()
