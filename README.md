@@ -1,6 +1,16 @@
 # Computer vision
 Computer vision projects. Most of the algorithms are programmed from scratch. 
 
+- [(Final project) Stereo visual odometry](https://github.com/Marnonel6/computer_vision/tree/main/Final_Project)
+    * Feature detection and matching
+    * Stereo to depth map (Disparity map)
+    * Lowe's ratio test
+    * PnP RANSAC for motion estimation (Transformation matrix)
+
+
+
+
+
 - [(mp1) Image Segmentation](https://github.com/Marnonel6/computer_vision/tree/main/machine_problems/mp1)
     * Sequential Connected Component Labeling
     * Size/Noise Filter
