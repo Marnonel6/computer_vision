@@ -113,7 +113,7 @@ class VisualOdometry():
 
         return ground_truth
 
-    def feature_detection(self, detector, image, mask=None): # TODO do mask!!
+    def feature_detection(self, detector, image, mask=None):
         """
         Feature detection/extraction
 
