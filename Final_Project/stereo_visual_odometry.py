@@ -154,8 +154,8 @@ class VisualOdometry():
             matches (list): List of matches
         """
         if matcher == 'bf':
-            if detector == 'orb': # TODO try HAMMING2
-                match = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False) # TODO Try True without ratio test
+            if detector == 'orb':
+                match = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
             elif detector == 'sift':
                 match = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
         else:
@@ -464,7 +464,6 @@ class VisualOdometry():
 
         # Loop through the images and preform visual odometry
         for i in range(num_frames-1):
-            # TODO do timing
 
             # Previous image
             image_l_prev = self.image_l_list[i]
