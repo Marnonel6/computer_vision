@@ -6,7 +6,7 @@
 Visual odometry is the process of determining the position and orientation of a mobile robot by using camera images. A stereo camera setup and KITTI grayscale odometry dataset are used in this project. KITTI dataset is one of the most popular datasets and benchmarks for testing visual odometry algorithms. This project aims to use OpenCV functions and apply basic cv principles to process the stereo camera images and build visual odometry using the KITTI dataset. 
 
 ### Video demo
-https://youtu.be/k9cyyoGHMWg
+<iframe width="960" height="640" src="https://www.youtube.com/embed/XMeyRDLE4K4?si=ENV-ZfgACNpz-pgL" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 ### Algorithm descriptions
 
